@@ -1,5 +1,11 @@
 http://download.pytorch.org/whl/cu80/torch-0.2.0.post3-cp35-cp35m-manylinux1_x86_64.whl
+git+https://github.com/pytorch/text.git#egg=torchtext
+sacred
 torchvision
 nose
-spacy==1.9.0
+spacy
+numpy
+matplotlib
+pymongo
+nose
 -e .

@@ -2,9 +2,10 @@ language: python
 python:
   - "3.5"
 install:
-  - ./setup_dependencies.sh
-  - - pip install -r requirements/requirements.txt
+  - ./build.sh
+  - pip install -r requirements/requirements.txt
 script:
+  - python setup.py install
   - nosetests --with-coverage
 after_success:
   - coveralls

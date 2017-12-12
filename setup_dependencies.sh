@@ -1,8 +1,8 @@
-#!/usr/bin/env sh
+#!/usr/bin bash
 
 # Create a virtual environment
-#virtualenv -p python3 ~/venvs/bhabana
-#source ~/venvs/bhabana/bin/activate
+virtualenv -p python3 ~/venvs/bhabana
+source ~/venvs/bhabana/bin/activate
 
 # Install all the dev dependencies
 pip install -r requirements/requirements.txt
@@ -46,7 +46,7 @@ wget http://52.29.250.192:3000/datasets/amazon_reviews_de.tar.gz
 tar -xvzf amazon_reviews_de.tar.gz
 rm amazon_reviews_de.tar.gz
 
-cd ~/
+# cd ~/
 
 
 # Clone the repository. You can keep this repo wherever you want.
@@ -57,4 +57,4 @@ pip install -r requirements dev_requirements.txt
 # If you want to test if everything is fine then you can run the following
 # script
 
-nosetests bhabana/tests
+nosetests

@@ -1,4 +1,4 @@
-#!/usr/bin sh
+#!/usr/bin/env bash
 
 export PING_SLEEP=30s
 export WORKDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

@@ -1,4 +1,4 @@
-#!/usr/bin bash
+#!/usr/bin sh
 
 # Create a virtual environment
 virtualenv -p python3 ~/venvs/bhabana

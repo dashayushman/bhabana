@@ -15,7 +15,10 @@ class TestDataUtils():
     valid_file_url = utils.BASE_URL + 'datasets/' + 'test_ds.tar.gz'
     valid_file_name = "test_ds.tar.gz"
     invalid_tar_file = "test.tar.gz"
+    untared_file_name = "test_ds"
+    untared_path = os.path.join(temp_dir, 'test_ds')
     invalid_tar_file_path = os.path.join(temp_dir, invalid_tar_file)
+    valid_tar_file_path = os.path.join(temp_dir, valid_file_name)
 
     def __init__(self):
         self.download_valid_file_from_url_setup()
@@ -77,6 +80,41 @@ class TestDataUtils():
     @raises(ValueError)
     def test_extract_invalid_tar_file(self):
         du.extract_tar_gz(self.invalid_tar_file_path)
+
+    def test_extract_valid_tar_invalid_output_dir(self):
+        output_dir = os.path.join(self.temp_dir, 'test', 'test')
+        du.extract_tar_gz(self.valid_tar_file_path, output_dir)
+        untared_file_path = os.path.join(output_dir, self.untared_file_name)
+        assert_true(os.path.exists(untared_file_path))
+        if os.path.exists(untared_file_path): shutil.rmtree(untared_file_path)
+
+    def test_extract_valid_tar(self):
+        du.extract_tar_gz(self.valid_tar_file_path, self.temp_dir)
+        assert_true(os.path.exists(self.untared_path))
+
+    @raises(Exception)
+    def test_load_invalid_spacy_lang(self):
+        du.get_spacy("blah")
+
+    @raises(Exception)
+    def test_load_invalid_spacy_model_and_lang(self):
+        du.get_spacy("blah", "blah")
+
+    @raises(Exception)
+    def test_load_invalid_spacy_model_valid_lang(self):
+        du.get_spacy("en", "blah")
+
+    def test_load_valid_spacy_model_valid_lang(self):
+        spacy_obj = du.get_spacy("de", "de_core_news_sm")
+        assert_not_equal(spacy_obj, None)
+        key = "de_de_core_news_sm"
+        assert_not_equal(du.spacy_nlp_collection[key], None)
+        assert_true(key in du.spacy_nlp_collection)
+        del du.spacy_nlp_collection[key]
+
+    @raises(ValueError)
+    def test_load_spacy_not_corresponding_lang_model(self):
+        du.get_spacy("en", "de_core_news_sm")
 
 
 

@@ -12,6 +12,10 @@ python -m spacy download en_vectors_web_lg
 python -m spacy download de_core_news_sm
 python -m spacy download en_core_web_lg
 
+python -m spacy link en_core_web_lg en
+python -m spacy link de_core_news_sm de
+python -m spacy link en_vectors_web_lg en_vectors
+
 # Download the datasets to start training ASAP
 # You can alternatively use the downloader API in Bhabana, but the following
 # scripts will definitely make it faster

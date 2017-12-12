@@ -37,6 +37,10 @@ python -m spacy download en_vectors_web_lg >> $BUILD_OUTPUT 2>&1
 python -m spacy download de_core_news_sm >> $BUILD_OUTPUT 2>&1
 python -m spacy download en_core_web_lg >> $BUILD_OUTPUT 2>&1
 
+python -m spacy link en_core_web_lg en >> $BUILD_OUTPUT 2>&1
+python -m spacy link de_core_news_sm de >> $BUILD_OUTPUT 2>&1
+python -m spacy link en_vectors_web_lg en_vectors >> $BUILD_OUTPUT 2>&1
+
 # The build finished without returning an error so dump a tail of the output
 dump_output
 

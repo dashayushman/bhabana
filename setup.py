@@ -2,10 +2,7 @@ from setuptools import setup
 
 __version__ = "0.1.0"
 
-install_requires = [
-    "torchvision",
-    'spacy==1.9.0'
-]
+install_requires = []
 setup(
     # Application name:
     name="bhabana",

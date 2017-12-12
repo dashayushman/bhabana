@@ -3,7 +3,6 @@ import re
 import sys
 import spacy
 import tarfile
-import tflearn
 import logging
 import requests
 import collections
@@ -13,14 +12,14 @@ import progressbar
 import bhabana.utils as utils
 
 from bhabana.utils import wget
-from nltk.tokenize import word_tokenize as nltk_tokenizer
 
 logger = logging.getLogger(__name__)
-spacy_nlp = None
+spacy_nlp_en = None
 spacy_nlp_de = None
 
+
 def url_exists(url):
-    request = requests.get(url)
+    request = requests.get(url, timeout=20)
     if request.status_code == 200:
         logger.info('URL: {} exists'.format(url))
         return True
@@ -87,16 +86,19 @@ def maybe_download(name, type='model', force=False):
 
     output_path = os.path.join(output_dir, name)
     tar_file_path = output_path + '.tar.gz'
-    file_url = utils.BASE_URL + '/' + subdir + '/' + name + '.tar.gz'
+    file_url = utils.BASE_URL + subdir + '/' + name + '.tar.gz'
     if not os.path.exists(output_path):
         if not os.path.exists(tar_file_path):
             if user_wants_to_download(name, type, force):
                 logger.info('Trying to download files from {}'.format(file_url))
-                download_and_extract_tar(file_url, output_dir)
-            else:
-                raise FileNotFoundError('Could not find {} {}. Please download '
+                try:
+                    download_and_extract_tar(file_url, output_dir)
+                except:
+                    raise FileNotFoundError('Could not find {} {}. Please download '
                                         'the files to successfully run the '
                                         'script'.format(type, name))
+            else:
+                return None
         else:
             try:
                 extract_tar_gz(tar_file_path, output_dir)
@@ -115,16 +117,16 @@ def get_spacy(lang='en'):
     Keyword arguments:
     lang -- the language whose pipeline will be returned.
     """
-    global spacy_nlp
+    global spacy_nlp_en
     global spacy_nlp_de
 
-    if spacy_nlp is None:
+    if spacy_nlp_en is None:
         # TODO: support other spaCy English models
-        spacy_nlp = spacy.load('en_core_web_md')
+        spacy_nlp_en = spacy.load('en_core_web_md')
     if spacy_nlp_de is None:
         spacy_nlp_de = spacy.load('de_core_news_md')
 
-    return spacy_nlp if lang == 'en' else spacy_nlp_de
+    return spacy_nlp_en if lang == 'en' else spacy_nlp_de
 
 
 def pad_sentences(data, pad=0, raw=False):
@@ -151,6 +153,55 @@ def pad_sentences(data, pad=0, raw=False):
     return data
 
 
+def pad_sequences(sequences, maxlen=None, dtype='int32', padding='post',
+                  truncating='post', value=0.):
+    """ pad_sequences.
+
+    Pad each sequence to the same length: the length of the longest sequence.
+    If maxlen is provided, any sequence longer than maxlen is truncated to
+    maxlen. Truncation happens off either the beginning or the end (default)
+    of the sequence. Supports pre-padding and post-padding (default).
+
+    Arguments:
+        sequences: list of lists where each element is a sequence.
+        maxlen: int, maximum length.
+        dtype: type to cast the resulting sequence.
+        padding: 'pre' or 'post', pad either before or after each sequence.
+        truncating: 'pre' or 'post', remove values from sequences larger than
+            maxlen either in the beginning or in the end of the sequence
+        value: float, value to pad the sequences to the desired value.
+
+    Returns:
+        x: `numpy array` with dimensions (number_of_sequences, maxlen)
+
+    Credits: From Keras `pad_sequences` function.
+    """
+    lengths = [len(s) for s in sequences]
+
+    nb_samples = len(sequences)
+    if maxlen is None:
+        maxlen = np.max(lengths)
+
+    x = (np.ones((nb_samples, maxlen)) * value).astype(dtype)
+    for idx, s in enumerate(sequences):
+        if len(s) == 0:
+            continue  # empty list was found
+        if truncating == 'pre':
+            trunc = s[-maxlen:]
+        elif truncating == 'post':
+            trunc = s[:maxlen]
+        else:
+            raise ValueError("Truncating type '%s' not understood" % padding)
+
+        if padding == 'post':
+            x[idx, :len(trunc)] = trunc
+        elif padding == 'pre':
+            x[idx, -len(trunc):] = trunc
+        else:
+            raise ValueError("Padding type '%s' not understood" % padding)
+    return x
+
+
 def padseq(data, pad=0, raw=False):
     if pad == 0:
         return data
@@ -166,9 +217,8 @@ def padseq(data, pad=0, raw=False):
                 padded_data.append(d[:pad])
         return padded_data
     else:
-        return tflearn.data_utils.pad_sequences(data, maxlen=pad,
-                                                dtype='int32', padding='post',
-                                                truncating='post', value=0)
+        return pad_sequences(data, maxlen=pad, dtype='int32', padding='post',
+                             truncating='post', value=0)
 
 
 def id2seq(data, i2w):
@@ -321,11 +371,11 @@ def mark_entities(data, lang='en'):
             pipeline to call).
     """
     marked_data = []
-    spacy_nlp = get_spacy()
+    spacy_nlp = get_spacy(lang=lang)
     for line in data:
         marked_line = []
         for token in line:
-            tok = spacy_nlp(token, lang)[0]
+            tok = spacy_nlp(token)[0]
             if tok.ent_type_ != '':
                 marked_line.append('BOE')
                 marked_line.append(token)
@@ -371,12 +421,12 @@ def default_tokenize(sentence):
                                 sentence) if i != '' and i != ' ' and i != '\n']
 
 
-def tokenize(line, tokenizer='nltk', lang='en'):
+def tokenize(line, tokenizer='spacy', lang='en'):
     """
     Returns a list of strings containing each token in `line`.
 
     Keyword arguments:
-    tokenizer -- Possible values are 'spacy', 'nltk', 'split' and 'other'.
+    tokenizer -- Possible values are 'spacy', 'split' and 'other'.
     lang      -- Possible values are 'en' and 'de'
     """
     tokens = []
@@ -397,8 +447,6 @@ def tokenize(line, tokenizer='nltk', lang='en'):
                 tokens.append(text)
             else:
                 tokens.append(token.text)
-    elif tokenizer == 'nltk':
-        tokens = nltk_tokenizer(line)
     elif tokenizer == 'split':
         tokens = line.split(' ')
     else:

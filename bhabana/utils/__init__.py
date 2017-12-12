@@ -4,7 +4,7 @@ import logging
 import logging.config
 
 # boilerplate for registering the data directories
-DATA_ROOT_DIR = os.getenv('OVATION_DATA',
+DATA_ROOT_DIR = os.getenv('BHABANA_DATA',
                           os.path.expanduser(os.path.join('~', '.bhabana')))
 DATASET_DIR = os.path.join(DATA_ROOT_DIR, 'datasets')
 MODELS_DIR = os.path.join(DATA_ROOT_DIR, 'models')
@@ -32,6 +32,7 @@ if not os.path.exists(DATASET_DIR):
 if not os.path.exists(MODELS_DIR):
     os.makedirs(MODELS_DIR)
 
+"""
 log_config = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -85,3 +86,4 @@ log_config = {
 }
 
 logging.config.dictConfig(log_config)
+"""

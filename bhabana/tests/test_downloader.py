@@ -8,12 +8,10 @@ from nose.tools import *
 from bhabana.utils import data_utils as du
 
 logger = logging.getLogger(__name__)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 # TODO: write tests for download_model
 class TestDownloader():
-
     @classmethod
     def assert_dataset_components(self, ds_path):
         assert_true(os.path.exists(os.path.join(ds_path, 'train')))

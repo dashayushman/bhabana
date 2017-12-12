@@ -8,8 +8,6 @@ numpy
 matplotlib
 pymongo
 nose
-tflearn
 progressbar2
 python-coveralls
 coverage
--e .

@@ -5,7 +5,7 @@
 #source ~/venvs/bhabana/bin/activate
 
 # Install all the dev dependencies
-pip install -r requirements/dev_requirements.txt
+pip install -r requirements/requirements.txt
 
 # Install the Spacy models for DE and Eng
 python -m spacy download en_vectors_web_lg

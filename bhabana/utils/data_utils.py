@@ -6,9 +6,9 @@ import tarfile
 import logging
 import requests
 import collections
-import numpy as np
 import progressbar
 
+import numpy as np
 import bhabana.utils as utils
 
 from bhabana.utils import wget
@@ -19,12 +19,16 @@ spacy_nlp_de = None
 
 
 def url_exists(url):
-    request = requests.get(url, timeout=20)
+    try:
+        request = requests.get(url, timeout=20)
+    except Exception as e:
+        raise Exception(str(e))
     if request.status_code == 200:
         logger.info('URL: {} exists'.format(url))
         return True
     else:
-        logger.info('URL: {} does not exists'.format(url))
+        logger.warning('URL: {} does not exists or is not '
+                       'responding'.format(url))
         return False
 
 
@@ -44,7 +48,6 @@ def user_wants_to_download(name, type='model', force=False):
         user_response = False
     else:
         user_response = True
-
     return user_response
 
 
@@ -52,12 +55,15 @@ def download_from_url(url, output_dir):
     if not url_exists(url):
         raise FileNotFoundError('{} was not found in our data '
                                 'repository'.format(url))
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
     filename = wget.download(url, out=output_dir)
     return filename
 
 
-def extract_tar_gz(file_path, output_dir):
+def extract_tar_gz(file_path, output_dir="."):
     logger.info('Untaring {}'.format(file_path))
+    if not tarfile.is_tarfile(file_path):
+        raise ValueError("{} is not a valid tar file".format(file_path))
     tar = tarfile.open(file_path, "r:gz")
     tar.extractall(path=output_dir)
     tar.close()

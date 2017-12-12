@@ -318,7 +318,9 @@ def download(url, out=None, bar=bar_adaptive):
         if update_width < total_size:
             bar.update(update_width)
         else:
-            bar.update(abs(update_width - total_size))
+            bar.update(
+                    #abs(update_width - total_size)
+            )
         #callback_progress(blocks, block_size, total_size, bar_function=bar)
 
     if bar:

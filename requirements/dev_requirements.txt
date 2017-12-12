@@ -12,4 +12,7 @@ tflearn
 progressbar2
 python-coveralls
 coverage
+recommonmark
+sphinx
+sphinx-autobuild
 -e .

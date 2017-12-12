@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# Thanks to
+# https://stackoverflow.com/questions/26082444/how-to-work-around-travis-cis-4mb-output-limit
+
 # Abort on Error
 set -e
 
@@ -17,14 +21,13 @@ error_handler() {
   dump_output
   exit 1
 }
+
 # If an error occurs, run our error handler to output a tail of the build
 trap 'error_handler' ERR
 
+# This is to fool Travis-CI that we are still building
 bash -c "while true; do echo \$(date) - building ...; sleep $PING_SLEEP; done" &
 PING_LOOP_PID=$!
-# Create a virtual environment
-#virtualenv -p python3 ~/venvs/bhabana
-#source ~/venvs/bhabana/bin/activate
 
 # Install all the dev dependencies
 pip install -r requirements/requirements.txt >> $BUILD_OUTPUT 2>&1

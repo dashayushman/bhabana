@@ -9,9 +9,9 @@ from bhabana.utils import data_utils as du
 
 logger = logging.getLogger(__name__)
 
+
 # TODO: write tests for download_model
 class TestDownloader():
-
     @classmethod
     def assert_dataset_components(self, ds_path):
         assert_true(os.path.exists(os.path.join(ds_path, 'train')))

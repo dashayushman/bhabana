@@ -43,6 +43,27 @@ class TestDataUtils():
         if os.path.exists(untared_path): shutil.rmtree(untared_path)
         if os.path.exists(self.temp_dir): shutil.rmtree(self.temp_dir)
 
+    @classmethod
+    def validate_sequence(self, original_sequence, padded_seq, max_len,
+                          gt_dtype, gt_pad_value, pad_index):
+        assert_equal(len(padded_seq[0]), max_len)
+        assert_equal(len(padded_seq[1]), max_len)
+        if max_len > len(original_sequence[0]):
+            assert_equal(padded_seq[0][pad_index], gt_pad_value)
+        if max_len > len(original_sequence[0]):
+            assert_equal(padded_seq[1][pad_index], gt_pad_value)
+        assert_equal(type(padded_seq[0][pad_index]).__name__, gt_dtype)
+        assert_equal(type(padded_seq[1][pad_index]).__name__, gt_dtype)
+
+    @classmethod
+    def validate_pad_sequence(self, original_sequence, padded_seq, max_len,
+                              gt_pad_value, pad_index=-1, raw=False):
+        assert_equal(len(padded_seq[0]), max_len)
+        if max_len > len(original_sequence[0]):
+            assert_equal(padded_seq[0][pad_index], gt_pad_value)
+        if raw and max_len > len(original_sequence[0]):
+            assert_equal(padded_seq[0][pad_index], gt_pad_value)
+
     @raises(Exception)
     def test_invalid_url(self):
         assert_false(du.url_exists("dsafcsef"))
@@ -115,6 +136,114 @@ class TestDataUtils():
     @raises(ValueError)
     def test_load_spacy_not_corresponding_lang_model(self):
         du.get_spacy("en", "de_core_news_sm")
+
+    @raises(Exception)
+    def test_invalid_pad_int_sequence_batch(self):
+        sequence = [0, 1, 3, 5]
+        #sequence = ["hello", "hello", "hello"]
+        du.pad_int_sequences(sequences=sequence)
+
+    @raises(Exception)
+    def test_invalid_trunc_pad_int_sequence_batch(self):
+        sequence = [0, 1, 3, 5]
+        du.pad_int_sequences(sequences=[sequence], truncating="blah")
+
+    @raises(Exception)
+    def test_invalid_padding_pad_int_sequence_batch(self):
+        sequence = [0, 1, 3, 5]
+        du.pad_int_sequences(sequences=[sequence], padding="blah")
+
+    @raises(Exception)
+    def test_invalid_padlen_zero_pad_int_sequence_batch(self):
+        sequence = [0, 1, 3, 5]
+        du.pad_int_sequences(sequences=[sequence], padding="post",
+                             maxlen=-1)
+
+    def test_zero_len_pad_int_sequence_batch(self):
+        sequence = [0, 1, 3, 5]
+        padded_seq = du.pad_int_sequences(sequences=[sequence],
+                                          padding="post", maxlen=0)
+        assert_equal(len(padded_seq[0]), 0)
+
+
+    def test_valid_pad_int_sequence_batch_default_params(self):
+        sequence = [[0, 1, 3, 5],
+                    [9, 4, 5, 23, 43]]
+        # sequence = ["hello", "hello", "hello"]
+        padded_sequence = du.pad_int_sequences(sequences=sequence,
+                                               maxlen=10, dtype="int32", padding="post",
+                                               truncating="post", value= 0)
+        assert_equal(len(padded_sequence[0]), 10)
+        assert_equal(len(padded_sequence[1]), 10)
+        assert_equal(padded_sequence[0][-1], 0)
+        assert_equal(padded_sequence[1][-1], 0)
+        assert_equal(type(padded_sequence[0][-1]).__name__, "int32")
+        assert_equal(type(padded_sequence[1][-1]).__name__, "int32")
+
+    def test_valid_pad_int_sequence_batch(self):
+        sequence = [[0, 1, 3, 5],
+                    [9, 4, 5, 23, 43]]
+        # sequence = ["hello", "hello", "hello"]
+        padded_sequence = du.pad_int_sequences(sequences=sequence,
+                                               maxlen=10, dtype="int32", padding="post",
+                                               truncating="post", value=0)
+        self.validate_sequence(sequence, padded_sequence, max_len=10,
+                               gt_dtype="int32", gt_pad_value=0, pad_index=-1)
+
+        padded_sequence = du.pad_int_sequences(sequences=sequence,
+                                               maxlen=2, dtype="float64", padding="post",
+                                               truncating="post", value=0)
+        self.validate_sequence(sequence, padded_sequence, max_len=2,
+                               gt_dtype="float64", gt_pad_value=0, pad_index=-1)
+
+        padded_sequence = du.pad_int_sequences(sequences=sequence,
+                                               maxlen=2, dtype="float64", padding="post",
+                                               truncating="pre", value=0)
+        self.validate_sequence(sequence, padded_sequence, max_len=2,
+                               gt_dtype="float64", gt_pad_value=0, pad_index=-1)
+
+        padded_sequence = du.pad_int_sequences(sequences=sequence,
+                                               maxlen=2, dtype="float64", padding="pre",
+                                               truncating="pre", value=4)
+        self.validate_sequence(sequence, padded_sequence, max_len=2,
+                               gt_dtype="float64", gt_pad_value=4, pad_index=0)
+
+        padded_sequence = du.pad_int_sequences(sequences=sequence,
+                                               maxlen=10, dtype="float64", padding="pre",
+                                               truncating="post", value=4)
+        self.validate_sequence(sequence, padded_sequence, max_len=10,
+                               gt_dtype="float64", gt_pad_value=4, pad_index=0)
+
+    @raises(Exception)
+    def test_invalid_pad_sequences(self):
+        du.pad_sequences([1, 2, 3, 4, "hello"], padlen=-1)
+
+    @raises(Exception)
+    def test_invalid_sequence_pad_sequences(self):
+        du.pad_sequences([1, 2, 3, 4, "hello"], padlen=20, raw=False)
+
+    def test_valid_pad_sequences(self):
+        int_sequence = [[1, 2, 3, 4]]
+        str_sequence = [[1, 2, 3, 4, "hello"]]
+        padded_sequence_1 = du.pad_sequences(int_sequence, padlen=20,
+                                             padvalue=486, raw=False)
+        padded_sequence_2 = du.pad_sequences(str_sequence, padlen=2,
+                                             padvalue="asd", raw=True)
+        padded_sequence_3 = du.pad_sequences(str_sequence, padlen=100,
+                                             padvalue=1, raw=True)
+        self.validate_pad_sequence(int_sequence, padded_sequence_1,
+                                   max_len=20, gt_pad_value=486)
+        self.validate_pad_sequence(str_sequence, padded_sequence_2,
+                                   max_len=2, gt_pad_value="PAD")
+        self.validate_pad_sequence(str_sequence, padded_sequence_3,
+                                   max_len=100, gt_pad_value="PAD")
+
+
+
+
+
+
+
 
 
 

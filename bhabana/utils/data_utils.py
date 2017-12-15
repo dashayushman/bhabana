@@ -135,7 +135,7 @@ def get_spacy(lang='en', model=None):
     return spacy_nlp_collection[model_key]
 
 
-def pad_sentence_batch(data_batch, pad=0, raw=False):
+def pad_sentences(data_batch, pad=0, raw=False):
     """
     Given a sentence, returns the sentence padded with the 'PAD' string. If
     `pad` is smaller than the size of the sentence, the sentence is trimmed
@@ -161,8 +161,9 @@ def pad_sentence_batch(data_batch, pad=0, raw=False):
     return padded_batch
 
 
-def pad_sequence_batch(sequences, maxlen=None, dtype='int32', padding='post',
-                  truncating='post', value=0.):
+def pad_int_sequences(sequences, maxlen=None, dtype='int32',
+                      padding='post',
+                      truncating='post', value=0.):
     """ pad_sequences.
 
     Pad each sequence to the same length: the length of the longest sequence.
@@ -210,23 +211,21 @@ def pad_sequence_batch(sequences, maxlen=None, dtype='int32', padding='post',
     return x
 
 
-def padseq(data, pad=0, raw=False):
-    if pad == 0:
-        return data
+def pad_sequences(data, padlen=0, padvalue=0, raw=False):
+    padded_data = []
+    if padlen == 0:
+        return []
     elif raw:
-        padded_data = []
         for d in data:
-            diff = pad - len(d)
+            diff = padlen - len(d)
             if diff > 0:
                 pads = ['PAD'] * diff
                 d = d + pads
-                padded_data.append(d[:pad])
-            else:
-                padded_data.append(d[:pad])
-        return padded_data
+            padded_data.append(d[:padlen])
     else:
-        return pad_sequence_batch(data, maxlen=pad, dtype='int32',
-                                 padding='post', truncating='post', value=0)
+        padded_data = pad_int_sequences(data, maxlen=padlen, dtype="int32",
+                                        padding='post', truncating='post', value=padvalue)
+    return padded_data
 
 
 def id2seq(data, i2w):

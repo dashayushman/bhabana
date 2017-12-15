@@ -14,8 +14,7 @@ import bhabana.utils as utils
 from bhabana.utils import wget
 
 logger = logging.getLogger(__name__)
-spacy_nlp_en = None
-spacy_nlp_de = None
+spacy_nlp_collection = {}
 
 
 def url_exists(url):
@@ -116,26 +115,27 @@ def maybe_download(name, type='model', force=False):
     return output_path
 
 
-def get_spacy(lang='en'):
+def get_spacy(lang='en', model=None):
     """
     Returns the spaCy pipeline for the specified language.
 
     Keyword arguments:
     lang -- the language whose pipeline will be returned.
     """
-    global spacy_nlp_en
-    global spacy_nlp_de
+    if model is not None:
+        if lang not in model:
+            raise ValueError("There is no correspondence between the Languge "
+                     "({})and the Model ({}) provided.".format(lang, model))
+    global spacy_nlp_collection
+    spacy_model_name = model if model is not None else lang
+    model_key = "{}_{}".format(lang, spacy_model_name)
+    if model_key not in spacy_nlp_collection:
+        spacy_nlp_collection[model_key] = spacy.load(spacy_model_name)
 
-    if spacy_nlp_en is None:
-        # TODO: support other spaCy English models
-        spacy_nlp_en = spacy.load('en_core_web_md')
-    if spacy_nlp_de is None:
-        spacy_nlp_de = spacy.load('de_core_news_md')
-
-    return spacy_nlp_en if lang == 'en' else spacy_nlp_de
+    return spacy_nlp_collection[model_key]
 
 
-def pad_sentences(data, pad=0, raw=False):
+def pad_sentences(data_batch, pad=0, raw=False):
     """
     Given a sentence, returns the sentence padded with the 'PAD' string. If
     `pad` is smaller than the size of the sentence, the sentence is trimmed
@@ -147,20 +147,23 @@ def pad_sentences(data, pad=0, raw=False):
     pad -- The number of elements to which the sentence should be padded.
     raw -- If True, the padding character will be a string 'PAD'; else, 0.
     """
-    if pad == 0:
-        return data
-    if pad <= len(data):
-        return data[:pad]
+    padded_batch = []
+    for data in data_batch:
+        if pad == 0:
+            return data
+        if pad <= len(data):
+            return data[:pad]
 
-    pad_vec = [0 if not raw else 'PAD' for _ in range(len(data[-1]))]
-    for i in range(pad - len(data)):
-        data.append(pad_vec)
+        pad_vec = [0 if not raw else 'PAD' for _ in range(len(data[-1]))]
+        for i in range(pad - len(data)):
+            padded_batch.append(pad_vec)
 
-    return data
+    return padded_batch
 
 
-def pad_sequences(sequences, maxlen=None, dtype='int32', padding='post',
-                  truncating='post', value=0.):
+def pad_int_sequences(sequences, maxlen=None, dtype='int32',
+                      padding='post',
+                      truncating='post', value=0.):
     """ pad_sequences.
 
     Pad each sequence to the same length: the length of the longest sequence.
@@ -208,23 +211,21 @@ def pad_sequences(sequences, maxlen=None, dtype='int32', padding='post',
     return x
 
 
-def padseq(data, pad=0, raw=False):
-    if pad == 0:
-        return data
+def pad_sequences(data, padlen=0, padvalue=0, raw=False):
+    padded_data = []
+    if padlen == 0:
+        return []
     elif raw:
-        padded_data = []
         for d in data:
-            diff = pad - len(d)
+            diff = padlen - len(d)
             if diff > 0:
                 pads = ['PAD'] * diff
                 d = d + pads
-                padded_data.append(d[:pad])
-            else:
-                padded_data.append(d[:pad])
-        return padded_data
+            padded_data.append(d[:padlen])
     else:
-        return pad_sequences(data, maxlen=pad, dtype='int32', padding='post',
-                             truncating='post', value=0)
+        padded_data = pad_int_sequences(data, maxlen=padlen, dtype="int32",
+                                        padding='post', truncating='post', value=padvalue)
+    return padded_data
 
 
 def id2seq(data, i2w):

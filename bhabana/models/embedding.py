@@ -1,4 +1,4 @@
-import torch
+import torch as th
 import torch.nn as nn
 
 
@@ -6,7 +6,7 @@ class Embedding(nn.Module):
 
     requires = ["inputs", "training"]
 
-    provides = ["embedding_features"]
+    provides = ["out"]
 
     def __init__(self, vocab_size, embedding_dims, padding_idx=0,
                  pretrained_word_vectors=None, trainable=True, dropout=0.5):
@@ -22,7 +22,7 @@ class Embedding(nn.Module):
     def init_weights(self, pretrained_word_vectors, trainable=False):
         if pretrained_word_vectors is not None:
             self.embedding.weight = nn.Parameter(
-                torch.from_numpy(pretrained_word_vectors).float())
+                th.from_numpy(pretrained_word_vectors).float())
         if not trainable:
             self.embedding.weight.requires_grad = False
 
@@ -34,7 +34,5 @@ class Embedding(nn.Module):
         if data["training"]:
             embedding_features = self.dropout(embedding_features)
 
-        data["embedding_features"] = embedding_features
+        data["out"] = embedding_features
         return data
-
-

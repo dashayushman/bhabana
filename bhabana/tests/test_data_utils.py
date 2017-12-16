@@ -2,9 +2,12 @@ import os
 import logging
 import shutil
 
+import torch as th
+import torch.nn as nn
 import bhabana.utils as utils
 
 from nose.tools import *
+from torch.autograd import Variable
 from bhabana.utils import data_utils as du
 
 logger = logging.getLogger(__name__)
@@ -238,10 +241,65 @@ class TestDataUtils():
         self.validate_pad_sequence(str_sequence, padded_sequence_3,
                                    max_len=100, gt_pad_value="PAD")
 
+    @raises(Exception)
+    def test_valid_pad_conv_1d(self):
+        input_seq = Variable(th.randn(10, 20, 30))
+        du.pad_1dconv_input(input_seq, mode="valid")
 
+    @raises(Exception)
+    def test_full_pad_conv_1d_stride_1(self):
+        input_seq = Variable(th.randn(10, 20, 30))
+        du.pad_1dconv_input(input_seq, mode="full")
 
+    @raises(Exception)
+    def test_wrong_pad_conv_1d_stride_1(self):
+        input_seq = Variable(th.randn(10, 20, 30))
+        du.pad_1dconv_input(input_seq, mode="blah")
 
+    @raises(Exception)
+    def test_wrong_input_pad_conv_1d_stride_1(self):
+        input_seq = Variable(th.randn(10, 20, 30, 34))
+        du.pad_1dconv_input(input_seq, kernel_size=4, mode="same")
 
+    def test_1dconv_pad_same_conv_stride_1(self):
+        # BATCH X TIME_STEPS X IN_CHANNELS
+        input_seq = Variable(th.randn(10, 20, 30))
+        padded_input_seq = du.pad_1dconv_input(input_seq, kernel_size=4,
+                                               mode="same")
+        # BATCH X IN_CHANNELS X TIME_STEPS
+        padded_input_seq = padded_input_seq.permute(0, 2, 1)
+        conv = nn.Conv1d(30, 100, 4)
+        conv_output = conv(padded_input_seq)
+        conv_output_shape = list(conv_output.size())
+        assert_equals(conv_output_shape[0], 10)
+        assert_equals(conv_output_shape[1], 100)
+        assert_equals(conv_output_shape[2], 20)
+
+        padded_input_seq = du.pad_1dconv_input(input_seq, kernel_size=5,
+                                               mode="same")
+        # BATCH X IN_CHANNELS X TIME_STEPS
+        padded_input_seq = padded_input_seq.permute(0, 2, 1)
+        conv = nn.Conv1d(30, 100, 5)
+        conv_output = conv(padded_input_seq)
+        conv_output_shape = list(conv_output.size())
+        assert_equals(conv_output_shape[0], 10)
+        assert_equals(conv_output_shape[1], 100)
+        assert_equals(conv_output_shape[2], 20)
+
+    def test_1dconv_pad_full_conv_stride_1(self):
+        # BATCH X TIME_STEPS X IN_CHANNELS
+        input_seq = Variable(th.randn(10, 20, 30))
+        padded_input_seq = du.pad_1dconv_input(input_seq, kernel_size=5,
+                                               mode="full")
+        padded_seq_shape = list(padded_input_seq.size())
+        # BATCH X IN_CHANNELS X TIME_STEPS
+        padded_input_seq = padded_input_seq.permute(0, 2, 1)
+        conv = nn.Conv1d(30, 100, 5)
+        conv_output = conv(padded_input_seq)
+        conv_output_shape = list(conv_output.size())
+        assert_equals(conv_output_shape[0], 10)
+        assert_equals(conv_output_shape[1], 100)
+        assert_equals(conv_output_shape[2], padded_seq_shape[1] - 5 + 1)
 
 
 

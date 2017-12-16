@@ -2,8 +2,8 @@ import torch
 import numpy as np
 
 from nose.tools import *
-from bhabana.models import Embedding
 from torch.autograd import Variable
+from bhabana.models import Embedding
 
 class TestEmbedding():
     vocab_size = 20
@@ -53,10 +53,10 @@ class TestEmbedding():
             assert_true(ret in response)
         gt_1 = np.ones((5, self.embedding_dims))
         gt_1[-1,:] = np.zeros((self.embedding_dims,))
-        assert_true(np.array_equal(response["embedding_features"][0].data.numpy(),
+        assert_true(np.array_equal(response["out"][0].data.numpy(),
                                    gt_1))
-        assert_true(np.array_equal(response["embedding_features"][1].data.numpy(),
+        assert_true(np.array_equal(response["out"][1].data.numpy(),
                            np.ones((5, 300))))
-        assert_true(np.array_equal(response["embedding_features"][0].data.numpy()[-1],
+        assert_true(np.array_equal(response["out"][0].data.numpy()[-1],
                            np.zeros((300,))))
 

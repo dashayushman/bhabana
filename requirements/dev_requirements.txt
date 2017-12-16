@@ -15,4 +15,6 @@ coverage
 recommonmark
 sphinx
 sphinx-autobuild
+tensorboardX
+tensorflow
 -e .

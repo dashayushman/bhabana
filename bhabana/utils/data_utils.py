@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import math
 import spacy
 import tarfile
 import logging
@@ -8,10 +9,12 @@ import requests
 import collections
 import progressbar
 
+import torch as th
 import numpy as np
 import bhabana.utils as utils
 
 from bhabana.utils import wget
+from torch.autograd import Variable
 
 logger = logging.getLogger(__name__)
 spacy_nlp_collection = {}
@@ -226,6 +229,49 @@ def pad_sequences(data, padlen=0, padvalue=0, raw=False):
         padded_data = pad_int_sequences(data, maxlen=padlen, dtype="int32",
                                         padding='post', truncating='post', value=padvalue)
     return padded_data
+
+
+def pad_1dconv_input(input, kernel_size, mode="same"):
+    """
+    This method pads the input for "same" and "full" 
+    convolutions. Currently just Same  and full padding modes have been 
+    implemented
+    :param input: Input Tensor with shape BATCH_SIZE X TIME_STEPS X FEATURES  
+    :param mode: 
+    :return: Padded Input Tensor with shape BATCH_SIZE X TIME_STEPS X FEATURES
+    """
+    input_size = list(input.size())
+    if len(input_size) != 3:
+        raise ValueError("The Shape of the input is invalid."
+         " The Shape of the current input is {}, but ideally a 3D "
+             "vector is expected with shape in the following format:"
+                 " BATCH_SIZE X TIME_STEPS X FEATURES".format(input_size))
+
+    n_time_steps = input_size[1]
+    if mode == "same":
+        n_padding = n_time_steps - (n_time_steps - kernel_size + 1)
+    elif mode == "full":
+        n_padding = 2 * (kernel_size -1)
+    else:
+        raise NotImplementedError("Other modes for padding have not been "
+                                  "implemented. Valid and Full are coming "
+                                  "soon")
+    if n_padding == 0:
+        padded_input = input
+    elif (n_padding % 2) == 0:
+        pad_len = int(n_padding / 2)
+        pad_tensor = Variable(th.zeros(input_size[0], pad_len, input_size[-1]))
+        padded_input = th.cat([pad_tensor, input, pad_tensor], dim=1)
+    else:
+        pad_len = n_padding / 2
+        l_pad = int(math.ceil(pad_len))
+        r_pad = int(math.floor(pad_len))
+        l_pad_tensor = Variable(th.zeros(input_size[0], l_pad,
+                                         input_size[-1]))
+        r_pad_tensor = Variable(th.zeros(input_size[0], r_pad,
+                                         input_size[-1]))
+        padded_input = th.cat([l_pad_tensor, input, r_pad_tensor], dim=1)
+    return padded_input
 
 
 def id2seq(data, i2w):

@@ -44,7 +44,9 @@ class RecurrentBlock(nn.Module):
         d1 = self.n_layers if not self.bidirectional else self.n_layers * 2
         h = Variable(th.zeros(d1, batch_size, self.hidden_size))
         c = Variable(th.zeros(d1, batch_size, self.hidden_size))
-        return (h, c)
+        ret = h if (type(self.rnn) is nn.GRU or type(self.rnn) is nn.RNN) \
+                    else  (h, c)
+        return ret
 
     def repackage_hidden(self, h):
         """Wraps hidden states in new Variables, to detach them from their 

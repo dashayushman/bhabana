@@ -103,7 +103,7 @@ class NGramCNN(nn.Module):
 
     def forward(self, data):
         # Input Shape: B X TIMESTEPS X CHANNELS -> B X CHANNELS X TIMESTEPS
-        layer_outs, layer_ngram_features = self.__exec_conv_blocks(
+        layer_outs, layer_ngram_features = self._exec_conv_blocks(
                 data["inputs"], data["training"])
         data["out"] = layer_outs[-1]
         data["ngram_features"] = layer_ngram_features[-1]

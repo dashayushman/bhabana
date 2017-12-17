@@ -1,0 +1,62 @@
+import torch as th
+import torch.nn as nn
+
+from torch.autograd import Variable
+
+
+class RecurrentBlock(nn.Module):
+    requires = ["inputs", "hidden"]
+
+    provides = ["out", "out_hidden"]
+
+    def __init__(self, input_size, hidden_size, bidirectional=False,
+                 rnn_cell="LSTM", n_layers=1, dropout=0.5):
+        super(RecurrentBlock, self).__init__()
+
+        self.input_size = input_size
+        self.cell = self._get_rnn_cell(rnn_cell)
+        self.hidden_size = hidden_size if not bidirectional else hidden_size // 2
+        self.bidirectional = bidirectional
+        self.n_layers = n_layers
+        self.dropout = dropout
+        self.rnn = self.cell(input_size=self.input_size,
+                             hidden_size=self.hidden_size,
+                             num_layers=self.n_layers,
+                             bidirectional=self.bidirectional,
+                             dropout=self.dropout,
+                             batch_first=True)
+
+    def _get_rnn_cell(self, rnn_cell):
+        cell = None
+        if rnn_cell.lower() == "rnn":
+            cell = nn.RNN
+        elif rnn_cell.lower() == "lstm":
+            cell = nn.LSTM
+        elif rnn_cell.lower() == "gru":
+            cell = nn.GRU
+        else:
+            raise ValueError("{} cell is currently not supported or is an "
+                             "invalid cell type. Supported Cell Types are: "
+                             "lstm, rnn and gru.".format(rnn_cell))
+        return cell
+
+    def init_hidden(self, batch_size):
+        d1 = self.n_layers if not self.bidirectional else self.n_layers * 2
+        h = Variable(th.zeros(d1, batch_size, self.hidden_size))
+        c = Variable(th.zeros(d1, batch_size, self.hidden_size))
+        return (h, c)
+
+    def repackage_hidden(self, h):
+        """Wraps hidden states in new Variables, to detach them from their 
+        history."""
+        if type(h) == Variable:
+            return Variable(h.data)
+        else:
+            return tuple(self.repackage_hidden(v) for v in h)
+
+    def forward(self, data):
+        output, hidden = self.rnn(data["inputs"], data["hidden"])
+        data["out"] = output
+        data["out_hidden"] = hidden
+        return data
+

@@ -10,7 +10,8 @@ class RecurrentBlock(nn.Module):
     provides = ["out", "out_hidden"]
 
     def __init__(self, input_size, hidden_size, bidirectional=False,
-                 rnn_cell="LSTM", n_layers=1, dropout=0.5):
+                 rnn_cell="LSTM", n_layers=1, dropout=0.5,
+                 return_sequence=True):
         super(RecurrentBlock, self).__init__()
 
         self.input_size = input_size
@@ -19,6 +20,7 @@ class RecurrentBlock(nn.Module):
         self.bidirectional = bidirectional
         self.n_layers = n_layers
         self.dropout = dropout
+        self.return_sequence = return_sequence
         self.rnn = self.cell(input_size=self.input_size,
                              hidden_size=self.hidden_size,
                              num_layers=self.n_layers,
@@ -58,7 +60,8 @@ class RecurrentBlock(nn.Module):
 
     def forward(self, data):
         output, hidden = self.rnn(data["inputs"], data["hidden"])
-        data["out"] = output
+        data["out"] = output if self.return_sequence \
+                      else output.split(split_size=1, dim=1)[-1].squeeze()
         data["out_hidden"] = hidden
         return data
 

@@ -1,16 +1,16 @@
 import logging
 
-import numpy as np
 import torch as th
 
-from bhabana.models import RecurrentBlock
-from torch.autograd import Variable
 from nose.tools import *
+from torch.autograd import Variable
+from bhabana.models import RecurrentBlock
+
 
 logger = logging.getLogger(__name__)
 
 
-class TestDataUtils():
+class TestRecurrentBlock():
     input_size = 300
     hidden_size = 100
     n_samples = 20
@@ -18,6 +18,7 @@ class TestDataUtils():
     dropout = 0.3
     n_layers = 3
     bidirectional = False
+    return_sequence = True
     cell_type = ["GRU", "RNN", "LSTM"]
     inputs = Variable(th.randn(n_samples, time_steps, input_size))
 
@@ -26,7 +27,8 @@ class TestDataUtils():
                                     hidden_size=self.hidden_size,
                                     bidirectional=self.bidirectional,
                                     rnn_cell=ctype, n_layers=self.n_layers,
-                                    dropout=self.dropout)
+                                    dropout=self.dropout,
+                                    return_sequence=self.return_sequence)
                      for ctype in self.cell_type]
 
     def tearDown(self):
@@ -147,6 +149,27 @@ class TestDataUtils():
             for i in range(5):
                 data["hidden"] = rnn.repackage_hidden(data["hidden"])
                 response = rnn(data)
+                for ret in rnn.provides:
+                    assert_true(ret in response)
                 assert_not_equals(response, None)
                 self.validate_hidden(response["out_hidden"])
                 self.validate_output(response["out"])
+
+    def test_no_return_sequence(self):
+        for rnn in self.rnns:
+            rnn.return_sequence = False
+            data = {
+                "inputs": self.inputs,
+                "hidden": rnn.init_hidden(self.n_samples)
+            }
+            for i in range(5):
+                data["hidden"] = rnn.repackage_hidden(data["hidden"])
+                response = rnn(data)
+                for ret in rnn.provides:
+                    assert_true(ret in response)
+                assert_not_equals(response, None)
+                self.validate_hidden(response["out_hidden"])
+                output_shape = list(data["out"].size())
+                assert_equals(len(output_shape), 2)
+                assert_equals(output_shape[0], self.n_samples)
+                assert_equals(output_shape[1], self.hidden_size)

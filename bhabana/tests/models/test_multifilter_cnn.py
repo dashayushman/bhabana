@@ -86,9 +86,6 @@ class TestDataUtils():
         data = {"inputs": self.inputs, "training": False}
         response = self.mfl_cnn(data)
 
-        for ret in self.mfl_cnn.provides:
-            assert_true(ret in response)
-
         output_shape = list(response["out"].size())
         assert_not_equals(response, None)
         assert_equals(output_shape[0], self.n_samples)

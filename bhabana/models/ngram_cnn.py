@@ -7,10 +7,6 @@ from bhabana.utils import data_utils as du
 
 class NGramCNN(nn.Module):
 
-    requires = ["inputs", "training"]
-
-    provides = ["out", "ngram_features", "layer_outs", "ngram_features"]
-
     def __init__(self, in_channels, n_layers=1, kernel_dim=100,
                  kernel_sizes=(3, 4, 5), dropout=0.5):
         super(NGramCNN, self).__init__()
@@ -103,11 +99,14 @@ class NGramCNN(nn.Module):
 
     def forward(self, data):
         # Input Shape: B X TIMESTEPS X CHANNELS -> B X CHANNELS X TIMESTEPS
+        resp = {}
         layer_outs, layer_ngram_features = self._exec_conv_blocks(
                 data["inputs"], data["training"])
-        data["out"] = layer_outs[-1]
-        data["ngram_features"] = layer_ngram_features[-1]
-        data["layer_outs"] = layer_outs
-        data["layer_ngram_features"] = layer_ngram_features
 
-        return data
+        # Shape: B X CHANNELS X TIMESTEPS -> B X TIMESTEPS X CHANNELS
+        resp["out"] = layer_outs[-1]
+        resp["aux"] = {"ngram_features": layer_ngram_features[-1],
+                       "layer_outs": layer_outs,
+                       "layer_ngram_features": layer_ngram_features}
+
+        return resp

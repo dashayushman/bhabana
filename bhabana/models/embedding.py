@@ -4,10 +4,6 @@ import torch.nn as nn
 
 class Embedding(nn.Module):
 
-    requires = ["inputs", "training"]
-
-    provides = ["out"]
-
     def __init__(self, vocab_size, embedding_dims, padding_idx=0,
                  pretrained_word_vectors=None, trainable=True, dropout=0.5):
         super(Embedding, self).__init__()
@@ -34,5 +30,5 @@ class Embedding(nn.Module):
         if data["training"]:
             embedding_features = self.dropout(embedding_features)
 
-        data["out"] = embedding_features
-        return data
+        resp = {"out": embedding_features}
+        return resp

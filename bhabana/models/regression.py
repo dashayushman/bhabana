@@ -20,7 +20,7 @@ class Regressor(nn.Module):
         self.fcl = nn.Linear(input_size, 1)
 
     def forward(self, data):
-        data["out"] = self.fcl(data["inputs"])
+        resp = {"out": self.fcl(data["inputs"])}
         if self.activation is not None:
-            data["out"] = self.activation(data["out"])
-        return data
+            resp["out"] = self.activation(resp["out"])
+        return resp

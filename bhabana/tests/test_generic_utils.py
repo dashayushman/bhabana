@@ -1,11 +1,10 @@
 import logging
 
 import numpy as np
-import torch as th
 import torch.nn as nn
+import bhabana.utils as utils
 
 from nose.tools import *
-from torch.autograd import Variable
 from bhabana.utils import generic_utils as gu
 
 logger = logging.getLogger(__name__)

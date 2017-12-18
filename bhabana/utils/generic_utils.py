@@ -1,6 +1,8 @@
 import torch as th
 import numpy as np
 
+from bhabana.utils import constants
+
 
 # This method has been taken from tflearn
 def to_categorical(y, n_classes):
@@ -65,3 +67,26 @@ def get_activation_by_name(activation=None):
                          "the current version or is an invalid activation "
                          "function.".format(activation))
     return act_module
+
+
+def position_encoding_init(n_position, d_pos_vec):
+    ''' Init the sinusoid position encoding table '''
+
+    # keep dim 0 for padding token position encoding zero vector
+    position_enc = np.array([
+        [pos / np.power(10000, 2 * (j // 2) / d_pos_vec) for j in range(d_pos_vec)]
+        if pos != 0 else np.zeros(d_pos_vec) for pos in range(n_position)])
+
+    position_enc[1:, 0::2] = np.sin(position_enc[1:, 0::2]) # dim 2i
+    position_enc[1:, 1::2] = np.cos(position_enc[1:, 1::2]) # dim 2i+1
+    return th.from_numpy(position_enc).type(th.FloatTensor)
+
+
+def get_attn_padding_mask(seq_q, seq_k):
+    ''' Indicate the padding-related part to mask '''
+    assert seq_q.dim() == 2 and seq_k.dim() == 2
+    mb_size, len_q = seq_q.size()
+    mb_size, len_k = seq_k.size()
+    pad_attn_mask = seq_k.data.eq(constants .PAD).unsqueeze(1)   # bx1xsk
+    pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k) # bxsqxsk
+    return pad_attn_mask

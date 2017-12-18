@@ -49,8 +49,6 @@ class TestEmbedding():
         data = {"inputs": batch_input, "training": False}
         response = self.emb.forward(data)
 
-        for ret in self.emb.provides:
-            assert_true(ret in response)
         gt_1 = np.ones((5, self.embedding_dims))
         gt_1[-1,:] = np.zeros((self.embedding_dims,))
         assert_true(np.array_equal(response["out"][0].data.numpy(),

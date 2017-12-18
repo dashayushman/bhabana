@@ -5,10 +5,6 @@ import torch.nn.functional as F
 
 class MultiFilterCNN(nn.Module):
 
-    requires = ["inputs", "training"]
-
-    provides = ["out"]
-
     def __init__(self,in_channels, kernel_dim=100, kernel_sizes=(3, 4, 5),
                  dropout=0.5):
         super(MultiFilterCNN, self).__init__()

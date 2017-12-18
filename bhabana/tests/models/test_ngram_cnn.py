@@ -105,11 +105,8 @@ class TestDataUtils():
         data = {"inputs": self.inputs, "training": False}
         response = self.ngram_cnn(data)
 
-        for ret in self.ngram_cnn.provides:
-            assert_true(ret in response)
-
         output_shape = list(response["out"].size())
-        ngram_features_shape = list(response["ngram_features"].size())
+        ngram_features_shape = list(response["aux"]["ngram_features"].size())
         assert_not_equals(response, None)
         assert_equals(output_shape[0], self.n_samples)
         assert_equals(output_shape[1], self.time_steps)
@@ -131,11 +128,8 @@ class TestDataUtils():
             data = {"inputs": self.inputs, "training": False}
             response = self.ngram_cnn(data)
 
-            for ret in self.ngram_cnn.provides:
-                assert_true(ret in response)
-
             output_shape = list(response["out"].size())
-            ngram_features_shape = list(response["ngram_features"].size())
+            ngram_features_shape = list(response["aux"]["ngram_features"].size())
             assert_not_equals(response, None)
             assert_equals(output_shape[0], self.n_samples)
             assert_equals(output_shape[1], self.time_steps)

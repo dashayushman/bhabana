@@ -5,9 +5,6 @@ from torch.autograd import Variable
 
 
 class RecurrentBlock(nn.Module):
-    requires = ["inputs", "hidden"]
-
-    provides = ["out", "out_hidden"]
 
     def __init__(self, input_size, hidden_size, bidirectional=False,
                  rnn_cell="LSTM", n_layers=1, dropout=0.5,
@@ -60,8 +57,8 @@ class RecurrentBlock(nn.Module):
 
     def forward(self, data):
         output, hidden = self.rnn(data["inputs"], data["hidden"])
-        data["out"] = output if self.return_sequence \
-                      else output.split(split_size=1, dim=1)[-1].squeeze()
-        data["out_hidden"] = hidden
-        return data
+        resp = {"out": output if self.return_sequence \
+                      else output.split(split_size=1, dim=1)[-1].squeeze()}
+        resp["aux"] = {"hidden": hidden}
+        return resp
 

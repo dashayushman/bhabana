@@ -137,7 +137,7 @@ class TestRecurrentBlock():
             }
             response = rnn(data)
             assert_not_equals(response, None)
-            self.validate_hidden(response["out_hidden"])
+            self.validate_hidden(response["aux"]["hidden"])
             self.validate_output(response["out"])
 
     def test_repackage_hidden(self):
@@ -149,10 +149,8 @@ class TestRecurrentBlock():
             for i in range(5):
                 data["hidden"] = rnn.repackage_hidden(data["hidden"])
                 response = rnn(data)
-                for ret in rnn.provides:
-                    assert_true(ret in response)
                 assert_not_equals(response, None)
-                self.validate_hidden(response["out_hidden"])
+                self.validate_hidden(response["aux"]["hidden"])
                 self.validate_output(response["out"])
 
     def test_no_return_sequence(self):
@@ -165,11 +163,9 @@ class TestRecurrentBlock():
             for i in range(5):
                 data["hidden"] = rnn.repackage_hidden(data["hidden"])
                 response = rnn(data)
-                for ret in rnn.provides:
-                    assert_true(ret in response)
                 assert_not_equals(response, None)
-                self.validate_hidden(response["out_hidden"])
-                output_shape = list(data["out"].size())
+                self.validate_hidden(response["aux"]["hidden"])
+                output_shape = list(response["out"].size())
                 assert_equals(len(output_shape), 2)
                 assert_equals(output_shape[0], self.n_samples)
                 assert_equals(output_shape[1], self.hidden_size)

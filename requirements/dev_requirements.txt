@@ -17,4 +17,5 @@ sphinx
 sphinx-autobuild
 tensorboardX
 tensorflow
+sacredboard
 -e .

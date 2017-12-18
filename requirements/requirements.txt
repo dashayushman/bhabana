@@ -7,7 +7,5 @@ spacy
 numpy
 matplotlib
 pymongo
-nose
 progressbar2
-python-coveralls
-coverage
+sacredboard

@@ -8,7 +8,7 @@ DATA_ROOT_DIR = os.getenv('BHABANA_DATA',
                           os.path.expanduser(os.path.join('~', '.bhabana')))
 DATASET_DIR = os.path.join(DATA_ROOT_DIR, 'datasets')
 MODELS_DIR = os.path.join(DATA_ROOT_DIR, 'models')
-
+EXPERIMENTS_DIR = os.path.join(DATA_ROOT_DIR, 'experiments')
 # url to download the data from. It can be downloaded manually too.
 BASE_URL = 'http://52.29.250.192:3000/'
 DATA_REGISTER = {
@@ -31,3 +31,6 @@ if not os.path.exists(DATASET_DIR):
 
 if not os.path.exists(MODELS_DIR):
     os.makedirs(MODELS_DIR)
+
+if not os.path.exists(EXPERIMENTS_DIR):
+    os.makedirs(EXPERIMENTS_DIR)

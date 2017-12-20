@@ -2,11 +2,13 @@ from bhabana.processing import Processor
 
 
 class DataProcessingPipeline:
-    def __init__(self, pipeline, name=None, add_to_output=True):
+    def __init__(self, pipeline, name=None, add_to_output=True,
+                 add_length=False):
 
         self.pipeline = self.validate_pipeline(pipeline)
         self.name = self._get_name() if name is None else name
         self.add_to_output = add_to_output
+        self.add_length = add_length
 
     def _get_name(self):
         name = []
@@ -44,4 +46,8 @@ class DataProcessingPipeline:
                 prev_output = processor.process(prev_output)
             else:
                 raise Exception("{}".format(validation_status["error"]))
-        return prev_output
+        if self.add_to_output:
+            resp = {self.name: prev_output}
+            if self.add_length and hasattr(prev_output, '__iter__'):
+                resp["{}_lengths".format(self.name)] = len(prev_output)
+            return resp

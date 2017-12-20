@@ -706,6 +706,47 @@ def get_spacy_vector_size(lang="en", model=None):
             return tok.vector.shape[0]
 
 
+def get_spacy_pos_tags(lang="en"):
+    mod = sys.modules["spacy.lang.{}.tag_map".format(lang)]
+    tag_list = []
+    for k in mod.TAG_MAP:
+        tag_list.append(k)
+    del mod
+    return list(set(tag_list))
+
+
+def get_spacy_dep_tags(lang="en"):
+    if lang == "en":
+        return constants.EN_DEP_TAGS
+    elif lang == "en":
+        return constants.DE_DEP_TAGS
+    else:
+        return constants.UNIVERSAL_DEP_TAGS
+
+
+def get_spacy_ner_tags(lang="en"):
+    if lang == "en":
+        return constants.ONE_NOTE_NER_TAGS
+    else:
+        return constants.WIKI_NER_TAGS
+
+
+def write_spacy_aux_vocab(path, lang, type="pos"):
+    if not os.path.exists(path):
+        if type == "pos":
+            vocab = get_spacy_pos_tags(lang)
+        elif type == "ner":
+            vocab = get_spacy_ner_tags(lang)
+        elif type == "dep":
+            vocab = get_spacy_dep_tags(lang)
+        else:
+            raise Exception("Type {} is not supported or is an invalid type of "
+                            "vocab.".format(type))
+        with codecs.open(path, 'w', 'utf-8') as f:
+            for tok in vocab:
+                f.write("{}\n".format(tok))
+
+
 def load_w2v(path):
     return np.load(path)
 

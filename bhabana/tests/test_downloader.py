@@ -65,7 +65,9 @@ class TestDownloader():
         url = utils.BASE_URL + 'datasets/test_ds.tar.gz'
         output_dir=utils.DATASET_DIR
         expected_path = os.path.join(utils.DATASET_DIR, 'test_ds')
-        du.download_from_url(url, output_dir)
+        tar_file_path = du.download_from_url(url, output_dir)
         downloaded_path = du.maybe_download('test_ds', type='dataset', force=True)
+        if os.path.exists(tar_file_path): os.remove(tar_file_path)
         assert_equals(downloaded_path, expected_path)
+
         self.assert_dataset_components(downloaded_path)

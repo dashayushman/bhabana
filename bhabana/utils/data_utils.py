@@ -3,6 +3,7 @@ import re
 import sys
 import math
 import spacy
+import codecs
 import tarfile
 import logging
 import requests
@@ -14,6 +15,7 @@ import numpy as np
 import bhabana.utils as utils
 
 from bhabana.utils import wget
+from bhabana.utils import constants
 from torch.autograd import Variable
 
 logger = logging.getLogger(__name__)
@@ -77,7 +79,7 @@ def delete_file(file_path):
 
 def download_and_extract_tar(file_url, output_dir):
     tar_file_path = download_from_url(file_url, output_dir)
-    extract_tar_gz(tar_file_path, output_dir)
+    #extract_tar_gz(tar_file_path, output_dir)
     delete_file(tar_file_path)
 
 
@@ -338,13 +340,13 @@ def seq2id(data, w2i, seq_begin=False, seq_end=False):
         id_seq = []
 
         if seq_begin:
-            id_seq.append(w2i['SEQ_BEGIN'])
+            id_seq.append(w2i[constants.BOS_WORD])
 
         for term in seq:
-            id_seq.append(w2i[term] if term in w2i else w2i['UNK'])
+            id_seq.append(w2i[term] if term in w2i else w2i[constants.UNK_WORD])
 
         if seq_end:
-            id_seq.append(w2i['SEQ_END'])
+            id_seq.append(w2i[constants.EOS_WORD])
 
         buff.append(id_seq)
     return buff
@@ -440,7 +442,7 @@ def mark_entities(data, lang='en'):
     return marked_data
 
 
-def sentence_tokenizer(line, lang='en'):
+def sentence_tokenize(line, lang='en'):
     """
     `line` is a string containing potentially multiple sentences. For each
     sentence, this function produces a list of tokens. The output of this
@@ -484,19 +486,13 @@ def tokenize(line, tokenizer='spacy', lang='en'):
     """
     tokens = []
     if tokenizer == 'spacy':
-        if lang == 'en':
-            doc = get_spacy(lang='en').tokenizer(line)
-        elif lang == 'de':
-            doc = get_spacy(lang='de').tokenizer(line)
-        else:
-            doc = get_spacy(lang='en').tokenizer(line)
+        doc = get_spacy(lang=lang).tokenizer(line)
         for token in doc:
             if token.ent_type_ == '':
-                if lang == 'en':
-                    text = token.text.lower()
-                else:
-                    # German is case sensitive
+                if lang == 'de':
                     text = token.text
+                else:
+                    text = token.text.lower()
                 tokens.append(text)
             else:
                 tokens.append(token.text)
@@ -505,6 +501,27 @@ def tokenize(line, tokenizer='spacy', lang='en'):
     else:
         tokens = default_tokenize(line)
     return tokens
+
+
+def semhash_tokenize(text, tokenizer="spacy", lang="en"):
+    tokens = tokenize(text, tokenizer=tokenizer, lang=lang)
+    hashed_tokens = ["#{}#".format(token) for token in tokens]
+    sem_hash_tokens = [["".join(gram)
+                        for gram in find_ngrams(list(hash_token), 3)]
+                           for hash_token in hashed_tokens]
+    return sem_hash_tokens
+
+
+def char_tokenize(text):
+    chars = list(text)
+    for i_c, char in enumerate(chars):
+        if char == " ":
+            chars[i_c] = constants.SPACE
+    return chars
+
+
+def find_ngrams(input_list, n):
+  return zip(*[input_list[i:] for i in range(n)])
 
 
 def vocabulary_builder(data_paths, min_frequency=5, tokenizer='spacy',
@@ -516,7 +533,7 @@ def vocabulary_builder(data_paths, min_frequency=5, tokenizer='spacy',
         bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength,
                                       redirect_stdout=True)
         n_line = 0
-        for line in open(data_path, 'r'):
+        for line in codecs.open(data_path, 'r', 'utf-8'):
             line = line_processor(line)
             if downcase:
                 line = line.lower()
@@ -586,7 +603,7 @@ def new_vocabulary(files, dataset_path, min_frequency, tokenizer,
                 'DATE', 'TIME', 'PERCENT', 'MONEY', 'QUANTITY',
                 'ORDINAL', 'CARDINAL', 'BOE', 'EOE']
 
-    with open(vocab_path, 'w') as vf, open(metadata_path, 'w') as mf:
+    with codecs.open(vocab_path, 'w', 'utf-8') as vf, codecs.open(metadata_path, 'w', 'utf-8') as mf:
         mf.write('word\tfreq\n')
         mf.write('PAD\t1\n')
         mf.write('SEQ_BEGIN\t1\n')
@@ -608,20 +625,28 @@ def new_vocabulary(files, dataset_path, min_frequency, tokenizer,
     return vocab_path, w2v_path, metadata_path
 
 
+def write_spacy_vocab(path, lang="en", model_name=None):
+    if not os.path.exists(path):
+        spacy_nlp = get_spacy(lang=lang, model=model_name)
+        vocab_size = 0
+        with codecs.open(path, 'w', 'utf-8') as f:
+            for tok in spacy_nlp.vocab:
+                vocab_size += 1
+                f.write("{}\n".format(tok.text))
+
+
 def load_classes(classes_path):
     """
     Loads the classes from file `classes_path`.
     """
     c2i = {}
     i2c = {}
-
-    with open(classes_path, 'r') as cf:
+    c_id = 0
+    with codecs.open(classes_path, 'r', 'utf-8') as cf:
         for line in cf:
-            line = line.strip()
-            cols = line.split('\t')
-            label, id = cols[0], int(cols[1])
-            c2i[label] = id
-            i2c[id] = label
+            label = line.strip()
+            c2i[label] = c_id
+            i2c[c_id] = label
     return c2i, i2c
 
 
@@ -629,21 +654,31 @@ def load_vocabulary(vocab_path):
     """
     Loads the vocabulary from file `vocab_path`.
     """
-    w2i = {}
-    i2w = {}
-    with open(vocab_path, 'r') as vf:
-        wid = 0
+    w2i = {constants.PAD_WORD: constants.PAD, constants.UNK_WORD: constants.UNK,
+           constants.BOS_WORD: constants.BOS, constants.EOS_WORD: constants.EOS,
+           constants.SPACE_WORD: constants.SPACE}
+    i2w = {constants.PAD: constants.PAD_WORD, constants.UNK: constants.UNK_WORD,
+           constants.BOS: constants.BOS_WORD, constants.EOS: constants.EOS_WORD,
+           constants.SPACE: constants.SPACE_WORD}
+    with codecs.open(vocab_path, 'r', 'utf-8') as vf:
+        wid = 5
+        dup_id = 0
         for line in vf:
             term = line.strip().split('\t')[0]
             if term not in w2i:
                 w2i[term] = wid
                 i2w[wid] = term
                 wid += 1
+            else:
+                w2i["{}{}".format(term, dup_id)] = wid
+                i2w[wid] = "{}{}".format(term, dup_id)
+                wid += 1
+                dup_id += 1
 
     return w2i, i2w
 
 
-def preload_w2v(w2i, initialize='random', lang='en'):
+def preload_w2v(w2i, lang='en', model=None):
     '''
     Loads the vocabulary based on spaCy's vectors.
 
@@ -653,18 +688,22 @@ def preload_w2v(w2i, initialize='random', lang='en'):
                     vocabulary
     lang       -- Either 'en' or 'de'.
     '''
-    print('Preloading a w2v matrix with dims VOCAB_SIZE X 300')
-    spacy_nlp = get_spacy(lang)
-    if initialize == 'random':
-        w2v = np.random.rand(len(w2i), 300)
-    else:
-        w2v = np.zeros((len(w2i), 300))
-
+    logger.info('Preloading a w2v matrix')
+    spacy_nlp = get_spacy(lang, model)
+    vec_size = get_spacy_vector_size(lang, model)
+    w2v = np.zeros((len(w2i), vec_size))
     for term in w2i:
         if spacy_nlp(term).has_vector:
             w2v[w2i[term]] = spacy_nlp(term).vector
-
     return w2v
+
+
+def get_spacy_vector_size(lang="en", model=None):
+    spacy_nlp = get_spacy(lang, model)
+    for lex in spacy_nlp.vocab:
+        tok = spacy_nlp(lex.text)
+        if tok.has_vector:
+            return tok.vector.shape[0]
 
 
 def load_w2v(path):
@@ -675,8 +714,8 @@ def save_w2v(path, w2v):
     return np.save(path, w2v)
 
 
-def validate_rescale(rescale):
-    if rescale[0] > rescale[1]:
+def validate_rescale(range):
+    if range[0] > range[1]:
         raise ValueError('Incompatible rescale values. rescale[0] should '
                          'be less than rescale[1]. An example of a valid '
                          'rescale is (4, 8).')

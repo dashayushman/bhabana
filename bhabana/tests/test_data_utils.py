@@ -2,6 +2,7 @@ import os
 import logging
 import shutil
 
+import numpy as np
 import torch as th
 import torch.nn as nn
 import bhabana.utils as utils
@@ -301,8 +302,18 @@ class TestDataUtils():
         assert_equals(conv_output_shape[1], 100)
         assert_equals(conv_output_shape[2], padded_seq_shape[1] - 5 + 1)
 
+    def test_write_spacy_vocab(self):
+        path = '/tmp/spacy_vocab.txt'
+        du.write_spacy_vocab(path, lang="de")
+        assert_true(os.path.exists(path))
 
+    def test_load_w2v(self):
+        w2i = {"blah": 0, "heansszclk!!": 1}
+        w2v = du.preload_w2v(w2i, lang="de", model=None)
+        size = du.get_spacy_vector_size("de", None)
+        assert_equals(w2v.shape[0], 2)
+        assert_true(w2v.shape[1], size)
 
-
-
-
+    def test_get_spacy_vector_size(self):
+        size = du.get_spacy_vector_size("de", None)
+        assert_not_equals(size, None)

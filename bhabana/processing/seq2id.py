@@ -1,13 +1,16 @@
 from bhabana.utils.data_utils import seq2id
+from bhabana.utils.data_utils import semhashseq2id
+from bhabana.utils.data_utils import sentence2id
 
 from bhabana.processing import Processor
 
 
 class Seq2Id(Processor):
-    def __init__(self, w2i, seq_begin=False, seq_end=False):
+    def __init__(self, w2i, seq_begin=False, seq_end=False, mode="word"):
         self.w2i = w2i
         self.seq_begin = seq_begin
         self.seq_end = seq_end
+        self.mode = mode
 
     def is_valid_data(self, data):
         validation_message = {"is_valid": True}
@@ -23,5 +26,14 @@ class Seq2Id(Processor):
         return self.process(data)
 
     def process(self, data):
-        return seq2id([data], self.w2i, self.seq_begin, self.seq_end)[0]
-
+        if self.mode in ["word", "char", "dep", "pos", "ent"]:
+            idseq = seq2id([data], self.w2i, self.seq_begin, self.seq_end)[0]
+        elif self.mode == "semhash":
+            idseq = semhashseq2id([data], self.w2i)[0]
+        elif self.mode == "sentence":
+            idseq = sentence2id([data], self.w2i)[0]
+        else:
+            raise NotImplementedError("{} mode has not been implemented yet "
+                                      "or it is an invalid mode".format(
+                    self.mode))
+        return idseq

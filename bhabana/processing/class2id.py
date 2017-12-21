@@ -7,9 +7,9 @@ class Class2Id(Processor):
 
     def is_valid_data(self, data):
         validation_message = {"is_valid": True}
-        if type(data) == str:
+        if type(data) != str:
             validation_message["is_valid"] = False
-            validation_message["error"] = "Data fed to Seq2Id is not an " \
+            validation_message["error"] = "Data fed to Class2Id is not an " \
                       "iterable. Ideally the data being fed to Seq2Id in a " \
                       "DataProcessingPipeline must already be tokenized and" \
                       " it should be an iterable of strings"

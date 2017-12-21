@@ -13,15 +13,17 @@ class JSONLineProcessor(Processor):
             j = json.loads(data, encoding="utf-8")
             for i_f, field in enumerate(self.fields):
                 if field["key"] not in j:
-                    raise ValueError('{} was set as the key in field {}, '
-                                     'but it was not found in the data. '
-                                     'Please verify if the data is correct or'
-                                     ' if the field is missing a key'.format(
-                                        field["key"], i_f))
+                    validation_message["is_valid"] = False
+                    validation_message["error"] = '{} was set as the key in ' \
+                          'field {}, but it was not found in the data. Please ' \
+                          'verify if the data is correct or if the field is' \
+                          ' missing a key'.format(field["key"], i_f)
                 if field["key"] is None:
-                    raise ValueError('Field {} with key {} has value None. '
-                                     'Please verify if your data is in the '
-                                     'right format'.format(i_f, field["key"]))
+                    validation_message["is_valid"] = False
+                    validation_message["error"] = 'Field {} with key {} has' \
+                                      ' value None. Please verify if your data' \
+                                      ' is in the right format'.format(i_f,
+                                                               field["key"])
         except Exception as e:
             validation_message["is_valid"] = False
             validation_message["error"] = "Data must be a valid JSON String. " \
@@ -30,7 +32,7 @@ class JSONLineProcessor(Processor):
         return validation_message
 
     def __call__(self, data):
-        self.process(data)
+        return self.process(data)
 
     def process(self, data):
         j = json.loads(data, encoding="utf-8")

@@ -5,8 +5,8 @@ import time
 from nose.tools import *
 
 import bhabana.utils as utils
-from bhabana.trainer.train import ex
-from bhabana.trainer.train import experiment_boilerplate
+from bhabana.trainer.brahmaputra import ex
+from bhabana.trainer.brahmaputra import experiment_boilerplate
 
 
 class TestTrainerScript:

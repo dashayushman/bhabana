@@ -20,4 +20,4 @@ class OneHot(Processor):
         return self.process(data)
 
     def process(self, data):
-        return to_categorical(data, self.n_classes)
+        return to_categorical(data, self.n_classes).tolist()

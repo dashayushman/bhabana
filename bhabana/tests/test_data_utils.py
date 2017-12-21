@@ -2,7 +2,6 @@ import os
 import logging
 import shutil
 
-import numpy as np
 import torch as th
 import torch.nn as nn
 import bhabana.utils as utils

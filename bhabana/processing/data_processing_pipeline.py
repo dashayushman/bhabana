@@ -41,7 +41,7 @@ class DataProcessingPipeline:
     def run(self, data):
         prev_output = data
         for processor in self.pipeline:
-            validation_status = processor.is_valid_data(data)
+            validation_status = processor.is_valid_data(prev_output)
             if validation_status["is_valid"]:
                 prev_output = processor.process(prev_output)
             else:
@@ -49,5 +49,5 @@ class DataProcessingPipeline:
         if self.add_to_output:
             resp = {self.name: prev_output}
             if self.add_length and hasattr(prev_output, '__iter__'):
-                resp["{}_lengths".format(self.name)] = len(prev_output)
+                resp["{}_length".format(self.name)] = len(prev_output)
             return resp

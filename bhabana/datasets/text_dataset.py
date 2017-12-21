@@ -26,10 +26,14 @@ class TextDataset(Dataset):
         with codecs.open(file_name, "r", "utf-8") as df:
             line = df.read().strip()
             data_in_fields = self.line_processor(line)
-            for field_data, field in zip(self.fields, data_in_fields):
+            for field_data, field in zip(data_in_fields, self.fields):
                 if hasattr(field["processors"], "__iter__"):
                     for processor in field["processors"]:
                         if processor.add_to_output:
                             processed_fields.append(processor(field_data))
+                else:
+                    if field["processors"].add_to_output:
+                        processed_fields.append(field["processors"](field_data))
+
         sample = reduce(self.update_sample, tuple(processed_fields), {})
         return sample

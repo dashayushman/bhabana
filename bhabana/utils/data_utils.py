@@ -12,7 +12,10 @@ import progressbar
 
 import torch as th
 import numpy as np
+from sklearn.cluster.k_means_ import k_means
+
 import bhabana.utils as utils
+import bhabana.utils.generic_utils as gu
 
 from bhabana.utils import wget
 from bhabana.utils import constants
@@ -216,6 +219,55 @@ def pad_int_sequences(sequences, maxlen=None, dtype='int32',
     return x
 
 
+def pad_vector_sequences(data, maxlen, value):
+    last_dim_max = 0
+    for d in data:
+        for f in d:
+            if len(f) > last_dim_max: last_dim_max = len(f)
+    last_dim_padded_batch = []
+    for d in data:
+        padded_features = []
+        for f in d:
+            f = np.array(f)
+            diff = last_dim_max - f.shape[0]
+            padded_features.append(np.pad(f, (0, diff),
+                                       'constant', constant_values=value).tolist())
+        last_dim_padded_batch.append(padded_features)
+    last_dim_padded_batch = np.array(last_dim_padded_batch)
+
+    padded_batch = []
+    for d in last_dim_padded_batch:
+        d = np.array(d)
+        if d.shape[0] > maxlen:
+            padded_batch.append(d[:maxlen, :].tolist())
+        else:
+            diff = maxlen - d.shape[0]
+            padded_batch.append(np.pad(d, [(0, diff), (0, 0)],
+                               'constant', constant_values=value).tolist())
+    return padded_batch
+
+
+def get_batch_depth(batch):
+    n_dims = 1
+    for d in batch:
+        if type(d) == list:
+            for d_i in d:
+                if type(d_i) == list:
+                    for d_i_j in d_i:
+                        if type(d_i_j) == list:
+                            raise Exception("Currently padding for 3 "
+                                            "dimensions is supported")
+                        else:
+                            n_dims = 3
+                else:
+                    n_dims = 2
+                break
+        else:
+            n_dims = 1
+        break
+    return n_dims
+
+
 def pad_sequences(data, padlen=0, padvalue=0, raw=False):
     padded_data = []
     if padlen == 0:
@@ -228,8 +280,18 @@ def pad_sequences(data, padlen=0, padvalue=0, raw=False):
                 d = d + pads
             padded_data.append(d[:padlen])
     else:
-        padded_data = pad_int_sequences(data, maxlen=padlen, dtype="int32",
-                                        padding='post', truncating='post', value=padvalue)
+        #vec_data = np.array(data)
+        len_n_dims = get_batch_depth(data)
+        #len_n_dims = len(n_dims)
+        if len_n_dims == 2:
+            padded_data = pad_int_sequences(data, maxlen=padlen, dtype="int32",
+                        padding='post', truncating='post', value=padvalue).tolist()
+        elif len_n_dims == 3:
+            padded_data = pad_vector_sequences(data, maxlen=padlen,
+                                               value=padvalue)
+        else:
+            raise NotImplementedError("Padding for more than 3 dimensional vectors has "
+                            "not been implemented")
     return padded_data
 
 
@@ -343,11 +405,44 @@ def seq2id(data, w2i, seq_begin=False, seq_end=False):
             id_seq.append(w2i[constants.BOS_WORD])
 
         for term in seq:
-            id_seq.append(w2i[term] if term in w2i else w2i[constants.UNK_WORD])
+            try:
+                id_seq.append(w2i[term] if term in w2i else w2i[constants.UNK_WORD])
+            except Exception as e:
+                print(str(e))
 
         if seq_end:
             id_seq.append(w2i[constants.EOS_WORD])
 
+        buff.append(id_seq)
+    return buff
+
+
+def semhashseq2id(data, w2i):
+
+    buff = []
+    for seq in data:
+        id_seq = []
+
+        for term_hash_seq in seq:
+            k_hot = []
+            for hash in term_hash_seq:
+                k_hot.append(gu.to_categorical(w2i[hash] if hash in w2i \
+                             else w2i[constants.UNK_WORD], len(w2i)))
+            k_hot = np.sum(k_hot, axis=0).tolist()
+            id_seq.append(k_hot)
+        buff.append(id_seq)
+    return buff
+
+
+def sentence2id(data, w2i):
+
+    buff = []
+    for sentences in data:
+        id_seq = []
+
+        for sentence in sentences:
+            id_sentence = seq2id(sentence, w2i)
+            id_seq.append(id_sentence)
         buff.append(id_seq)
     return buff
 
@@ -476,7 +571,7 @@ def default_tokenize(sentence):
                                 sentence) if i != '' and i != ' ' and i != '\n']
 
 
-def tokenize(line, tokenizer='spacy', lang='en'):
+def tokenize(line, tokenizer='spacy', lang='en', spacy_model=None):
     """
     Returns a list of strings containing each token in `line`.
 
@@ -486,7 +581,7 @@ def tokenize(line, tokenizer='spacy', lang='en'):
     """
     tokens = []
     if tokenizer == 'spacy':
-        doc = get_spacy(lang=lang).tokenizer(line)
+        doc = get_spacy(lang=lang, model=spacy_model).tokenizer(line)
         for token in doc:
             if token.ent_type_ == '':
                 if lang == 'de':
@@ -500,6 +595,31 @@ def tokenize(line, tokenizer='spacy', lang='en'):
         tokens = line.split(' ')
     else:
         tokens = default_tokenize(line)
+    return tokens
+
+
+def pos_tokenize(line, lang='en'):
+    tokens = []
+    doc = get_spacy(lang=lang)(line)
+    for token in doc:
+        tokens.append(token.tag_)
+    return tokens
+
+
+def dep_tokenize(line, lang='en'):
+    tokens = []
+    doc = get_spacy(lang=lang)(line)
+    for token in doc:
+        tokens.append(token.dep_)
+    return tokens
+
+
+def ent_tokenize(line, lang='en'):
+    tokens = []
+    doc = get_spacy(lang=lang)(line)
+    for token in doc:
+        tokens.append(token.ent_type_ if token.ent_type_ != "" else
+                      constants.PAD_WORD)
     return tokens
 
 
@@ -647,6 +767,7 @@ def load_classes(classes_path):
             label = line.strip()
             c2i[label] = c_id
             i2c[c_id] = label
+            c_id += 1
     return c2i, i2c
 
 
@@ -692,9 +813,13 @@ def preload_w2v(w2i, lang='en', model=None):
     spacy_nlp = get_spacy(lang, model)
     vec_size = get_spacy_vector_size(lang, model)
     w2v = np.zeros((len(w2i), vec_size))
-    for term in w2i:
+    bar = progressbar.ProgressBar(max_value=len(w2i),
+                                  redirect_stdout=True)
+    for i_t, term in enumerate(w2i):
         if spacy_nlp(term).has_vector:
             w2v[w2i[term]] = spacy_nlp(term).vector
+            bar.update(i_t)
+    bar.finish()
     return w2v
 
 
@@ -707,11 +832,12 @@ def get_spacy_vector_size(lang="en", model=None):
 
 
 def get_spacy_pos_tags(lang="en"):
+    get_spacy(lang)
     mod = sys.modules["spacy.lang.{}.tag_map".format(lang)]
     tag_list = []
     for k in mod.TAG_MAP:
         tag_list.append(k)
-    del mod
+    #del mod
     return list(set(tag_list))
 
 
@@ -735,7 +861,7 @@ def write_spacy_aux_vocab(path, lang, type="pos"):
     if not os.path.exists(path):
         if type == "pos":
             vocab = get_spacy_pos_tags(lang)
-        elif type == "ner":
+        elif type == "ent":
             vocab = get_spacy_ner_tags(lang)
         elif type == "dep":
             vocab = get_spacy_dep_tags(lang)
@@ -794,5 +920,12 @@ def is_supported_data(name):
         return False
 
 if __name__ == '__main__':
-    path = maybe_download('amazon_reviews_dacsda', 'dataset')
-    print(path)
+    data_1 = [[[1, 2, 3], [2, 2, 3], [2, 3], [2, 3, 4, 5]],
+              [[1, 2, 3], [2, 2, 3], [2, 3]]]
+    data_2 = [[1, 2, 3, 4, 5 ,6], [1, 2, 3, 4]]
+    padded_data2 = pad_sequences(data_2, 2)
+    padded_data1 = pad_sequences(data_1, 2)
+
+    print(np.array(padded_data1))
+    print(padded_data2)
+

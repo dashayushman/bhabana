@@ -1,11 +1,12 @@
 import os
-import time
 import shutil
-import bhabana.utils as utils
+import time
 
 from nose.tools import *
-from bhabana.train import ex
-from bhabana.train import experiment_boilerplate
+
+import bhabana.utils as utils
+from bhabana.trainer.brahmaputra import ex
+from bhabana.trainer.brahmaputra import experiment_boilerplate
 
 
 class TestTrainerScript:

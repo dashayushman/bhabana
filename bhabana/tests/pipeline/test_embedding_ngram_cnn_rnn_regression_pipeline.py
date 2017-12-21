@@ -121,7 +121,7 @@ class TestEMbeddingNgramCNNRNNRegressionPipeline:
                 response = pipeline(data)
                 assert_not_equals(response, None)
                 self.validate_response(response)
-                data["hidden"] = response["hidden"]
+                #data["hidden"] = response["hidden"]
                 loss = loss_function(response["out"], self.gt)
                 loss.backward()
                 optimizer.step()

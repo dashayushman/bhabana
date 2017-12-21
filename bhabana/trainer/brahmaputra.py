@@ -8,14 +8,27 @@ ex = Experiment('sentiment_analysis')
 
 @ex.config
 def my_config():
-    dataset = "IMDB"
-    pipeline = "embedding_ngram_cnn_rnn_regression"
+
+    model = "brahmaputra"
+    dataset = {
+        "name": "IMDB",
+        "n_workers": 4,
+        "use_spacy_vocab": False,
+        "load_spacy_vectors": True,
+        "mode": "regression",
+        "cuda": True,
+        "rescale": None,
+    }
     setup = {
         "epochs": 20,
         "batch_size": 64,
         "max_time_steps": 30,
-        "experiment_name": "sa_{}_{}".format(pipeline, time.time()),
-        "experiment_root_dir": None
+        "experiment_name": "{}_{}".format(model, time.time()),
+        "experiment_root_dir": None,
+        "evaluate_every": 100,
+        "save_every": 100,
+        "early_stopping_delta": 0.04,
+        "patience": 5
     }
     embedding_layer = {
         "vocab_size": None,
@@ -35,7 +48,7 @@ def my_config():
         "rnn_layers": 1,
         "bidirectional": True,
         "rnn_dropout": 0.5,
-        "cell_types": "LSTM"
+        "cell_types": "lstm"
     }
     regression = {
         "activation": None
@@ -75,5 +88,18 @@ def experiment_boilerplate(setup_config):
 @ex.automain
 def run_pipeline(dataset, pipeline, setup, embedding_layer, ngram_cnn, rnn,
                  regression):
-    #print(setup, pipeline, embedding_layer, ngram_cnn, rnn, regression)
+    pass
+
+
+class BrahmaputraTrainer(Trainer):
+
+def train():
+    pass
+
+
+def evaluate():
+    pass
+
+
+def save_model():
     pass

@@ -16,6 +16,7 @@ def to_categorical(y, n_classes):
     """
     return np.eye(n_classes, dtype='uint8')[y]
 
+
 def get_activation_by_name(activation=None):
     act_module = None
     if activation is None:

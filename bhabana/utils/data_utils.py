@@ -324,7 +324,11 @@ def pad_1dconv_input(input, kernel_size, mode="same"):
         padded_input = input
     elif (n_padding % 2) == 0:
         pad_len = int(n_padding / 2)
-        pad_tensor = Variable(th.zeros(input_size[0], pad_len, input_size[-1]))
+        pad_tensor = Variable(th.zeros(input_size[0],
+                                       pad_len, input_size[-1]))
+        if input.data.is_cuda:
+            pad_tensor.cuda()
+            pad_tensor.data.cuda()
         padded_input = th.cat([pad_tensor, input, pad_tensor], dim=1)
     else:
         pad_len = n_padding / 2

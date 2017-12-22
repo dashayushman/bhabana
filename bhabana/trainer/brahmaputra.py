@@ -1,15 +1,27 @@
 import os
 import time
+import torch
+import shutil
 
+import numpy as np
+import torch.nn as nn
 import bhabana.utils as utils
 
+from torch import optim
+from torch.autograd import Variable
 from sacred import Experiment
-from bhabana.trainer import Trainer
 from bhabana.datasets import IMDB
+from bhabana.trainer import Trainer
+from tensorboardX import SummaryWriter
+from sacred.observers import SlackObserver
+from bhabana.metrics import PearsonCorrelation
+from torch.optim.lr_scheduler import MultiStepLR
 from bhabana.pipeline import EmbeddingNgramCNNRNNRegression
-from torch.optim import adam
 
+slack_config_file_path = os.path.join(os.path.dirname(__file__), "slack.json")
+slack_obs = SlackObserver.from_config(slack_config_file_path)
 ex = Experiment('sentiment_analysis')
+ex.observers.append(slack_obs)
 
 @ex.config
 def my_config():
@@ -17,12 +29,13 @@ def my_config():
     experiment_name = "SA_EMBED_NGRAM_CNN_RNN"
     dataset = {
         "name": "IMDB",
-        "n_workers": 4,
+        "n_workers": 1,
         "use_spacy_vocab": False,
-        "load_spacy_vectors": True,
+        "load_spacy_vectors": False,
         "spacy_model_name": None,
         "cuda": True,
         "rescale": None,
+        "max_seq_length": 300
     }
     setup = {
         "name": "brahmaputra",
@@ -31,11 +44,12 @@ def my_config():
         "max_time_steps": 30,
         "experiment_name": "{}_{}".format(experiment_name, time.time()),
         "experiment_root_dir": None,
-        "evaluate_every": 100,
+        "evaluate_every": 1,
         "save_every": 100,
         "early_stopping_delta": 0,
-        "patience": 5,
-        "train_on_gpu": True
+        "patience": 10,
+        "train_on_gpu": True,
+        "resume_from": None
     }
     pipeline = {
         "embedding_layer": {
@@ -51,7 +65,7 @@ def my_config():
             "cnn_dropout": 0.5
         },
         "rnn": {
-            "rnn_hidden_size": 100,
+            "rnn_hidden_size": 50,
             "rnn_layers": 1,
             "bidirectional": True,
             "rnn_dropout": 0.5,
@@ -62,7 +76,9 @@ def my_config():
         }
     }
     optimizer = {
-        "name": "adam"
+        "learning_rate": 0.0001,
+        "weight_decay": 0.0001,
+        "lr_scheduling_milestones": [8, 15, 25, 35]
     }
     experiment_config = experiment_boilerplate(setup)
 
@@ -126,70 +142,296 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors):
           embedding_dropout=pipeline_config["embedding_layer"]["embedding_dropout"],
           regression_activation=pipeline_config["regression"]["activation"],
           cnn_dropout=pipeline_config["ngram_cnn"]["cnn_dropout"],
-          rnn_dropout=pipeline_config["ngram_cnn"]["rnn_dropout"])
+          rnn_dropout=pipeline_config["rnn"]["rnn_dropout"])
     return pipeline
 
 @ex.automain
-def run_pipeline(experiment_name, dataset, setup, pipeline, experiment_config):
+def run_pipeline(experiment_name, dataset, setup, pipeline,
+                 optimizer, experiment_config, _log, _run):
     ds = get_dataset_class(dataset_config=dataset)
-    pipeline = get_pipeline(pipeline, vocab_size=dataset.vocab_sizes["word"],
-                            pretrained_word_vectors=dataset.w2v)
-    trainer = BrahmaputraTrainer(pipeline=pipeline, dataset=ds,
+    pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
+                            pretrained_word_vectors=ds.w2v)
+    trainer = BrahmaputraTrainer(experiment_name=experiment_name,
+                                 pipeline=pipeline, dataset=ds,
                                  experiment_config=experiment_config,
+                                 logger=_log,
+                                 run=_run,
                                  n_epochs=setup["epochs"],
                                  batch_size=setup["batch_size"],
+                                 max_seq_length=dataset["max_seq_length"],
                                  n_workers=dataset["n_workers"],
                                  early_stopping_delta=setup[
                                      "early_stopping_delta"],
                                  patience=setup["patience"],
                                  save_every=setup["save_every"],
                                  evaluate_every=setup["evaluate_every"],
+                                 learning_rate=optimizer["learning_rate"],
+                                 weight_decay=optimizer["weight_decay"],
                                  train_on_gpu=setup["train_on_gpu"])
-
+    trainer.run()
 
 
 class BrahmaputraTrainer(Trainer):
 
-    def __init__(self, pipeline, dataset, experiment_config, n_epochs=10,
-                 batch_size=64, n_workers=4, early_stopping_delta=0,
-                 patience=5, save_every=100, evaluate_every=100,
-                 train_on_gpu=True):
+    def __init__(self, experiment_name, pipeline, dataset, experiment_config,
+                 logger, run, n_epochs=10, batch_size=64, max_seq_length=0,
+                 n_workers=4, early_stopping_delta=0, patience=5,
+                 save_every=100, evaluate_every=100, learning_rate=0.001,
+                 weight_decay=0.0, train_on_gpu=True):
+        self.experiment_name = experiment_name
+        self.logger = logger
+        self.sacred_run = run
         self.pipeline = pipeline
         self.dataset = dataset
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
         self.experiment_config = experiment_config
+        self.writer = SummaryWriter(log_dir=experiment_config["logs_dir"])
         self.n_epochs = n_epochs
         self.batch_size = batch_size
+        self.max_seq_length = max_seq_length
         self.n_workers = n_workers
         self.early_stopping_delta = early_stopping_delta
         self.patience = patience
         self.save_every = save_every
         self.evaluate_every = evaluate_every
-        self.train_on_gpu = train_on_gpu
+        self.train_on_gpu = train_on_gpu and torch.cuda.is_available()
+        self._set_optimizer()
+        if self.train_on_gpu:
+            self.logger.info("CUDA found. Training model on GPU")
+            self.pipeline.cuda()
+        self.loss = nn.MSELoss()
+        self.metric = PearsonCorrelation()
+        self.best_model_path = os.path.join(self.experiment_config["checkpoints_dir"],
+                                            "best_model.pth.tar")
+        self._set_trackers()
+        self._set_dataloaders()
+
+    def _set_trackers(self):
+        self.current_epoch = 0
+        self.global_step = 0
+        self.best_loss = 100000
+        self.no_improvement_since = 0
+        self.time_to_stop = False
+        self.loss_history = []
+
+    def _set_dataloaders(self):
+        self.dataloader = {"train": self.dataset.get_batch(split="train",
+                                               to_tensor=True,
+                                               pad=True,
+                                               shuffle=False,
+                                               batch_size=self.batch_size,
+                                               num_workers=self.n_workers,
+                                               seq_max_len=self.max_seq_length),
+                           "validation": self.dataset.get_batch(
+                                               split="validation",
+                                               to_tensor=True,
+                                               pad=True, shuffle=False,
+                                               batch_size=self.batch_size,
+                                               num_workers=self.n_workers,
+                                               seq_max_len=self.max_seq_length),
+                           "test": self.dataset.get_batch(split="test",
+                                              to_tensor=True,
+                                              pad=True,
+                                              shuffle=False,
+                                              batch_size=self.batch_size,
+                                              num_workers=self.n_workers,
+                                              seq_max_len=self.max_seq_length)
+                           }
 
     def _set_optimizer(self):
-        pass
+        self.logger.info("Initializing the Optimizer")
+        trainable_parameters= filter(lambda p: p.requires_grad,
+                                     self.pipeline.parameters())
+        self.optimizer = optim.Adam(trainable_parameters,
+                               lr=self.learning_rate,
+                               weight_decay=self.weight_decay)
+        self.scheduler = MultiStepLR(self.optimizer,
+                                     milestones=[60, 100, 150, 400],
+                                     gamma=0.1)
+
+    def __call__(self, *args, **kwargs):
+        self.run()
 
     def run(self):
         self.load()
+        for epoch in range(self.current_epoch, self.n_epochs):
+            self.pipeline.train()
+            self.logger.info("Training Epoch: {}".format(epoch))
+            self.current_epoch = epoch
+            for i_train, train_batch in self.dataloader["train"]:
+                self.train(train_batch)
+                self.pipeline.eval()
+                if self.time_to_evaluate(self.evaluate_every, i_train):
+                    self.logger.info("Evaluating: mode=Validation")
+                    self.run_evaluation_epoch(self.dataloader["validation"],
+                                              mode="validation")
+                if self.time_to_save(self.save_every, i_train):
+                    self.save()
+                self.pipeline.train()
+            self.pipeline.eval()
+            self.logger.info("Evaluating: mode=Validation")
+            self.run_evaluation_epoch(self.dataloader["validation"], mode="validation")
+            self.logger.info("Evaluating: mode=Test")
+            self.run_evaluation_epoch(self.dataloader["test"], mode="test")
+            self.save()
+            self.pipeline.train()
+            self.scheduler.step(epoch)
+            self.current_epoch += 1
+            if self.time_to_stop:
+                self.closure()
+                break
+
+    def get_rnn_hidden(self):
+        hidden = self.pipeline.init_rnn_hidden(self.batch_size,
+                                               self.train_on_gpu)
+        return hidden
 
     def train(self, batch):
+        self.pipeline.zero_grad()
+        batch["inputs"] = batch["text"]
+        batch["training"] = True
+        batch["hidden"] = self.get_rnn_hidden()
+        del batch["text"]
+        output = self.pipeline(batch)
+        loss = self.loss(output["out"],
+                         torch.unsqueeze(batch["sentiment"], dim=1))
+
+        self.update_loss_history(loss.data.cpu().numpy()[0])
+        loss.backward()
+        self.optimizer.step()
+        self.log("training.loss", loss)
+        self.global_step += 1
+        if self.global_step % 10 == 0:
+            self.logger.info("Epoch: {}\tGlobal Step: {}\t"
+                             "Training Loss: {}".format(self.current_epoch,
+                                                self.global_step,
+                                                loss.data.cpu().numpy()[0]))
+            self.log_histogram()
+            pc, p_val = self.metric(
+                    np.squeeze(output["out"].data.cpu().numpy(), axis=1),
+                             batch["sentiment"].data.cpu().numpy())
+            self.log("training.pearson_correlation", pc)
+            self.log("training.pearson_correlation_p_val", p_val)
+
+    def run_evaluation_epoch(self, dataloader, mode="validation"):
+        val_losses = []
+        val_pcs = []
+        for i_val, val_batch in dataloader:
+            val_loss, val_pc, val_p_val = self.evaluate(val_batch)
+            val_losses.append(val_loss)
+            val_pcs.append(val_pc)
+            if i_val % 10 == 0:
+                self.logger.info("Epoch: {}\tGlobal Step: {}\t"
+                                 "Mode: {}\tLoss: {}\tPC: {}\tBatch "
+                                 "Number: {}".format(
+                        self.current_epoch, self.global_step, mode,
+                        val_loss, val_pc, i_val))
+        avg_loss, avg_pc = np.average(val_losses), np.average(val_pcs)
+        self.log("{}.average_loss".format(mode), avg_loss)
+        self.log("{}.average_pearson_correlation".format(mode), avg_pc)
+        if mode == "validation":
+            self.update_loss_history(avg_loss)
+        self.restart_dataloader()
+
+    def restart_dataloader(self):
         pass
 
     def evaluate(self, batch):
-        pass
+        batch["inputs"] = batch["text"]
+        batch["training"] = False
+        batch["hidden"] = self.get_rnn_hidden()
+        del batch["text"]
+        output = self.pipeline(batch)
+        loss = self.loss(output["out"],
+                         torch.unsqueeze(batch["sentiment"], dim=1))
+        pc, p_val = self.metric(np.squeeze(output["out"].data.cpu().numpy(),
+                                       axis=1),
+                         batch["sentiment"].data.cpu().numpy())
+        return loss.data.cpu().numpy()[0], pc, p_val
 
     def load(self):
+        self.logger.info("Trying to load checkpoint from '{}'".format(
+                self.best_model_path))
+        if os.path.exists(self.best_model_path):
+            self.logger("Found checkpoint. Attemptimg to load it")
+            checkpoint = torch.load(self.best_model_path)
+            self.current_epoch = checkpoint['epoch']
+            self.global_step = checkpoint['global_step']
+            self.best_loss = checkpoint['best_loss']
+            self.pipeline.load_state_dict(checkpoint['state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.logger.info("Loaded checkpoint from: '{}'\n"
+             " Current Epoch: {}\n Best Loss: {}".format(self.best_model_path,
+                                 checkpoint['epoch'], checkpoint['best_loss']))
+        else:
+            self.logger.info(("Could not find checkpoint at : {} "
+                              "Training fresh parameters".format(
+                    self.best_model_path)))
 
+    def save(self):
+        if self.loss_has_improved():
+            self.logger.info("Saving Model as the loss has improved")
+            checkpoint_path = os.path.join(self.experiment_config[
+              "checkpoints_dir"], "model_{}_{}.pth.tar".format(self.current_epoch,
+                                                               self.global_step))
+            torch.save({
+                'epoch': self.current_epoch + 1,
+                'global_step': self.global_step + 1,
+                'arch': self.experiment_name,
+                'state_dict': self.pipeline.state_dict(),
+                'best_loss': self.best_loss,
+                'optimizer': self.optimizer.state_dict(),
+            }, checkpoint_path)
+            shutil.copyfile(checkpoint_path, 'best_model.pth.tar')
 
-    def save(self, epoch, global_step, best_loss):
-        checkpoint_dir = os.path
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': args.arch,
-            'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            'optimizer': optimizer.state_dict(),
-        }, is_best)
+    def loss_has_improved(self):
+        if self.no_improvement_since == 0:
+            return True
+        else:
+            return False
 
-    def loss_has_improved(self, batch):
+    def update_loss_history(self, loss):
+        if not self.time_to_stop:
+            if len(self.loss_history) > 0:
+                delta = self.loss_history[-1] - loss
+                if delta > self.early_stopping_delta:
+                    self.no_improvement_since = 0
+                else:
+                    self.no_improvement_since += 1
+                    if self.no_improvement_since >= self.patience:
+                        self.time_to_stop = True
+            else:
+                self.no_improvement_since = 0
+
+            self.loss_history.append(loss)
+
+    def closure(self):
+        self.writer.close()
+
+    def log(self, name, value):
+        if type(value) == np.ndarray:
+            sacred_value = value
+            tf_value = value
+        elif type(value) == Variable:
+            sacred_value = value.data.cpu().numpy()[0] if \
+                self.train_on_gpu else value.data.numpy()[0]
+            tf_value = value.data.cpu().numpy() if \
+                self.train_on_gpu else value.data.numpy()
+        elif type(value) in [float, int, np.float32, np.int, np.int32, np.float64]:
+            sacred_value = value
+            tf_value = np.expand_dims(np.array(value), axis=1)
+        else:
+            self.logger.warning("Unable to log values because of unknown "
+                                "dtype of the value")
+            return
+        self.sacred_run.log_scalar(name, sacred_value, self.global_step)
+        self.writer.add_scalar(name.replace(".", "/"),  tf_value, self.global_step)
+
+    def log_histogram(self):
+        for name, param in self.pipeline.named_parameters():
+            self.writer.add_histogram(name, param.clone().cpu().data.numpy(),
+                                      self.global_step)
+
+    def write_results_to_file(self):
         pass

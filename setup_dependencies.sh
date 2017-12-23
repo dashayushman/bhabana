@@ -16,6 +16,11 @@ python -m spacy link en_core_web_lg en
 python -m spacy link de_core_news_sm de
 python -m spacy link en_vectors_web_lg en_vectors
 
+# If you want to test if everything is fine then you can run the following
+# script
+
+nosetests
+
 # Download the datasets to start training ASAP
 # You can alternatively use the downloader API in Bhabana, but the following
 # scripts will definitely make it faster
@@ -40,12 +45,3 @@ rm imdb.tar.gz
 # cd ~/
 
 
-# Clone the repository. You can keep this repo wherever you want.
-git clone https://github.com/dashayushman/bhabana.git
-cd bhabana
-pip install -r requirements dev_requirements.txt
-
-# If you want to test if everything is fine then you can run the following
-# script
-
-nosetests

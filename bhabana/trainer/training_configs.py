@@ -64,7 +64,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "weight decay",
             "dataset": {
                 "name": "IMDB",
-                "n_workers": 10,
+                "n_workers": 9,
                 "load_spacy_vectors": True,
                 "max_seq_length": 400,
                 "rescale": (0, 1),
@@ -118,7 +118,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "sigmoid",
             "dataset": {
                 "name": "IMDB",
-                "n_workers": 10,
+                "n_workers": 9,
                 "load_spacy_vectors": True,
                 "max_seq_length": 400,
                 "rescale": (0, 1),
@@ -173,7 +173,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "decay",
             "dataset": {
                 "name": "IMDB",
-                "n_workers": 10,
+                "n_workers": 9,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 300,
@@ -230,7 +230,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "decay. Here we use an LSTM cell",
             "dataset": {
                 "name": "IMDB",
-                "n_workers": 10,
+                "n_workers": 9,
                 "load_spacy_vectors": True,
                 "max_seq_length": 400,
                 "cuda": True

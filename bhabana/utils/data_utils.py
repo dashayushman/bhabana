@@ -324,20 +324,27 @@ def pad_1dconv_input(input, kernel_size, mode="same"):
         padded_input = input
     elif (n_padding % 2) == 0:
         pad_len = int(n_padding / 2)
-        pad_tensor = Variable(th.zeros(input_size[0],
-                                       pad_len, input_size[-1]))
         if input.data.is_cuda:
-            pad_tensor.cuda()
-            pad_tensor.data.cuda()
+            pad_tensor = Variable(th.zeros(input_size[0],
+                       pad_len, input_size[-1]).cuda()).cuda()
+        else:
+            pad_tensor = Variable(th.zeros(input_size[0],
+                                           pad_len, input_size[-1]))
         padded_input = th.cat([pad_tensor, input, pad_tensor], dim=1)
     else:
         pad_len = n_padding / 2
         l_pad = int(math.ceil(pad_len))
         r_pad = int(math.floor(pad_len))
-        l_pad_tensor = Variable(th.zeros(input_size[0], l_pad,
-                                         input_size[-1]))
-        r_pad_tensor = Variable(th.zeros(input_size[0], r_pad,
-                                         input_size[-1]))
+        if not input.data.is_cuda:
+            l_pad_tensor = Variable(th.zeros(input_size[0], l_pad,
+                                             input_size[-1]))
+            r_pad_tensor = Variable(th.zeros(input_size[0], r_pad,
+                                             input_size[-1]))
+        else:
+            l_pad_tensor = Variable(th.zeros(input_size[0], l_pad,
+                                             input_size[-1]).cuda()).cuda()
+            r_pad_tensor = Variable(th.zeros(input_size[0], r_pad,
+                                             input_size[-1]).cuda()).cuda()
         padded_input = th.cat([l_pad_tensor, input, r_pad_tensor], dim=1)
     return padded_input
 
@@ -367,9 +374,73 @@ def id2seq(data, i2w):
         w_seq = []
         for term in seq:
             if term in i2w:
-                if term == 0 or term == 1 or term == 2:
-                    continue
                 w_seq.append(i2w[term])
+        sent = ' '.join(w_seq)
+        buff.append(sent)
+    return buff
+
+
+def id2charseq(data, i2w):
+    """
+    `data` is a list of sequences. Each sequence is a list of numbers. For
+    example, the following could be an example of data:
+
+    [[1, 10, 4, 1, 6],
+     [1, 2,  5, 1, 3],
+     [1, 8,  4, 1, 2]]
+
+    Each number represents the ID of a word in the vocabulary `i2w`. This
+    function transforms each list of numbers into the corresponding list of
+    words. For example, the list above could be transformed into:
+
+    [['the', 'dog',  'chased', 'the', 'cat' ],
+     ['the', 'boy',  'kicked', 'the', 'girl'],
+     ['the', 'girl', 'chased', 'the', 'boy' ]]
+
+    For a function that transforms the abovementioned list of words back into
+    IDs, see `seq2id`.
+    """
+    buff = []
+    for seq in data:
+        w_seq = []
+        for term in seq:
+            if term in i2w:
+                w_seq.append(i2w[term])
+        sent = ''.join(w_seq)
+        buff.append(sent)
+    return buff
+
+
+def id2semhashseq(data, i2w):
+    """
+    `data` is a list of sequences. Each sequence is a list of numbers. For
+    example, the following could be an example of data:
+
+    [[1, 10, 4, 1, 6],
+     [1, 2,  5, 1, 3],
+     [1, 8,  4, 1, 2]]
+
+    Each number represents the ID of a word in the vocabulary `i2w`. This
+    function transforms each list of numbers into the corresponding list of
+    words. For example, the list above could be transformed into:
+
+    [['the', 'dog',  'chased', 'the', 'cat' ],
+     ['the', 'boy',  'kicked', 'the', 'girl'],
+     ['the', 'girl', 'chased', 'the', 'boy' ]]
+
+    For a function that transforms the abovementioned list of words back into
+    IDs, see `seq2id`.
+    """
+    buff = []
+    for seq in data:
+        w_seq = []
+        for term in seq:
+            term_seq = []
+            trigram_indexes = np.where(term > 0)
+            for index in trigram_indexes:
+                if index in i2w:
+                    term_seq.append(i2w[term].replace("#", ""))
+            w_seq.append("".join(term_seq))
         sent = ' '.join(w_seq)
         buff.append(sent)
     return buff

@@ -1,27 +1,44 @@
 import os
+import json
 import time
 import torch
 import shutil
+import codecs
 
 import numpy as np
 import torch.nn as nn
 import bhabana.utils as utils
 
 from torch import optim
-from torch.autograd import Variable
 from sacred import Experiment
 from bhabana.datasets import IMDB
 from bhabana.trainer import Trainer
+from torch.autograd import Variable
+from bhabana.processing import Id2Seq
 from tensorboardX import SummaryWriter
 from sacred.observers import SlackObserver
+from sacred.observers import MongoObserver
 from bhabana.metrics import PearsonCorrelation
 from torch.optim.lr_scheduler import MultiStepLR
 from bhabana.pipeline import EmbeddingNgramCNNRNNRegression
 
+
+
 slack_config_file_path = os.path.join(os.path.dirname(__file__), "slack.json")
+mongo_config_file_path = os.path.join(os.path.dirname(__file__), "mongo.json")
+
+with open(mongo_config_file_path, "r") as jf:
+    mongo_config = json.load(jf)
+    mongo_obs = MongoObserver.create(
+    url='mongodb://{}:{}@{}/sacred_experiments?authMechanism=SCRAM'
+        '-SHA-1'.format(mongo_config["user"], mongo_config["password"],
+                        mongo_config["url"]),
+    db_name='sacred_experiments')
+
 slack_obs = SlackObserver.from_config(slack_config_file_path)
 ex = Experiment('sentiment_analysis')
 ex.observers.append(slack_obs)
+ex.observers.append(mongo_obs)
 
 @ex.config
 def my_config():
@@ -35,7 +52,7 @@ def my_config():
         "spacy_model_name": None,
         "cuda": True,
         "rescale": None,
-        "max_seq_length": 300
+        "max_seq_length": 100
     }
     setup = {
         "name": "brahmaputra",
@@ -76,9 +93,9 @@ def my_config():
         }
     }
     optimizer = {
-        "learning_rate": 0.0001,
-        "weight_decay": 0.0001,
-        "lr_scheduling_milestones": [8, 15, 25, 35]
+        "learning_rate": 0.001,
+        "weight_decay": 0.00001,
+        "lr_scheduling_milestones": [1, 3, 5, 7, 9, 13, 17]
     }
     experiment_config = experiment_boilerplate(setup)
 
@@ -95,80 +112,26 @@ def experiment_boilerplate(setup_config):
     experiment_config["logs_dir"] = os.path.join(
             experiment_config["experiment_dir"], "logs")
     experiment_config["test_results"] = os.path.join(
-            experiment_config["experiment_dir"], "test_results.tsv")
+            experiment_config["experiment_dir"], "test_results")
     experiment_config["val_results"] = os.path.join(
-            experiment_config["experiment_dir"], "val_results.tsv")
+            experiment_config["experiment_dir"], "val_results")
     experiment_config["train_results"] = os.path.join(
-            experiment_config["experiment_dir"], "train_results.tsv")
+            experiment_config["experiment_dir"], "train_results")
 
 
     if not os.path.exists(experiment_config["experiment_dir"]):
         os.makedirs(experiment_config["experiment_dir"])
-
     if not os.path.exists(experiment_config["checkpoints_dir"]):
         os.makedirs(experiment_config["checkpoints_dir"])
     if not os.path.exists(experiment_config["logs_dir"]):
         os.makedirs(experiment_config["logs_dir"])
+    if not os.path.exists(experiment_config["test_results"]):
+        os.makedirs(experiment_config["test_results"])
+    if not os.path.exists(experiment_config["validation_results"]):
+        os.makedirs(experiment_config["validation_results"])
+    if not os.path.exists(experiment_config["train_results"]):
+        os.makedirs(experiment_config["train_results"])
     return experiment_config
-
-
-def get_dataset_class(dataset_config):
-
-    if dataset_config["name"].lower() == "imdb":
-        ds = IMDB(mode="regression",
-                  use_spacy_vocab=dataset_config["use_spacy_vocab"],
-                  load_spacy_vectors=dataset_config["load_spacy_vectors"],
-                  spacy_model_name=dataset_config["spacy_model_name"],
-                  aux=["word"], cuda=dataset_config["cuda"],
-                  rescale=dataset_config["rescale"])
-    else:
-        raise NotImplementedError("{} dataset has not been "
-                                  "implemented".format(dataset_config["name"]))
-    return ds
-
-
-def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors):
-    pipeline = EmbeddingNgramCNNRNNRegression(vocab_size=vocab_size,
-          embedding_dims=pipeline_config["embedding_layer"]["embedding_dims"],
-          rnn_hidden_size=pipeline_config["rnn"]["rnn_hidden_size"],
-          bidirectional=pipeline_config["rnn"]["bidirectional"],
-          rnn_cell=pipeline_config["rnn"]["cell_type"],
-          rnn_layers=pipeline_config["rnn"]["rnn_layers"],
-          cnn_layers=pipeline_config["ngram_cnn"]["cnn_layers"],
-          cnn_kernel_dim=pipeline_config["ngram_cnn"]["cnn_kernel_dims"],
-          cnn_kernel_sizes=pipeline_config["ngram_cnn"]["cnn_kernel_sizes"],
-          padding_idx=0, pretrained_word_vectors=pretrained_word_vectors,
-          trainable_embeddings=pipeline_config["embedding_layer"]["train_embeddings"],
-          embedding_dropout=pipeline_config["embedding_layer"]["embedding_dropout"],
-          regression_activation=pipeline_config["regression"]["activation"],
-          cnn_dropout=pipeline_config["ngram_cnn"]["cnn_dropout"],
-          rnn_dropout=pipeline_config["rnn"]["rnn_dropout"])
-    return pipeline
-
-@ex.automain
-def run_pipeline(experiment_name, dataset, setup, pipeline,
-                 optimizer, experiment_config, _log, _run):
-    ds = get_dataset_class(dataset_config=dataset)
-    pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
-                            pretrained_word_vectors=ds.w2v)
-    trainer = BrahmaputraTrainer(experiment_name=experiment_name,
-                                 pipeline=pipeline, dataset=ds,
-                                 experiment_config=experiment_config,
-                                 logger=_log,
-                                 run=_run,
-                                 n_epochs=setup["epochs"],
-                                 batch_size=setup["batch_size"],
-                                 max_seq_length=dataset["max_seq_length"],
-                                 n_workers=dataset["n_workers"],
-                                 early_stopping_delta=setup[
-                                     "early_stopping_delta"],
-                                 patience=setup["patience"],
-                                 save_every=setup["save_every"],
-                                 evaluate_every=setup["evaluate_every"],
-                                 learning_rate=optimizer["learning_rate"],
-                                 weight_decay=optimizer["weight_decay"],
-                                 train_on_gpu=setup["train_on_gpu"])
-    trainer.run()
 
 
 class BrahmaputraTrainer(Trainer):
@@ -206,6 +169,8 @@ class BrahmaputraTrainer(Trainer):
                                             "best_model.pth.tar")
         self._set_trackers()
         self._set_dataloaders()
+        self.sequence_decoder = Id2Seq(i2w=self.dataset.vocab["word"][1],
+                                       mode="word", batch=True)
 
     def _set_trackers(self):
         self.current_epoch = 0
@@ -269,18 +234,22 @@ class BrahmaputraTrainer(Trainer):
                 if self.time_to_save(self.save_every, i_train):
                     self.save()
                 self.pipeline.train()
-            self.pipeline.eval()
-            self.logger.info("Evaluating: mode=Validation")
-            self.run_evaluation_epoch(self.dataloader["validation"], mode="validation")
-            self.logger.info("Evaluating: mode=Test")
-            self.run_evaluation_epoch(self.dataloader["test"], mode="test")
-            self.save()
-            self.pipeline.train()
             self.scheduler.step(epoch)
             self.current_epoch += 1
             if self.time_to_stop:
                 self.closure()
                 break
+
+    def _post_epoch_routine(self):
+        self.pipeline.eval()
+        self.logger.info("Evaluating: mode=Validation")
+        self.run_evaluation_epoch(self.dataloader["validation"],
+                                  mode="validation")
+        self.logger.info("Evaluating: mode=Test")
+        self.run_evaluation_epoch(self.dataloader["test"], mode="test")
+        self.save()
+        self.pipeline.train()
+        self.restart_dataloader("train")
 
     def get_rnn_hidden(self):
         hidden = self.pipeline.init_rnn_hidden(self.batch_size,
@@ -296,8 +265,8 @@ class BrahmaputraTrainer(Trainer):
         output = self.pipeline(batch)
         loss = self.loss(output["out"],
                          torch.unsqueeze(batch["sentiment"], dim=1))
-
-        self.update_loss_history(loss.data.cpu().numpy()[0])
+        scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
+        self.update_loss_history(scalar_loss)
         loss.backward()
         self.optimizer.step()
         self.log("training.loss", loss)
@@ -306,21 +275,27 @@ class BrahmaputraTrainer(Trainer):
             self.logger.info("Epoch: {}\tGlobal Step: {}\t"
                              "Training Loss: {}".format(self.current_epoch,
                                                 self.global_step,
-                                                loss.data.cpu().numpy()[0]))
+                                                scalar_loss))
             self.log_histogram()
-            pc, p_val = self.metric(
-                    np.squeeze(output["out"].data.cpu().numpy(), axis=1),
-                             batch["sentiment"].data.cpu().numpy())
+            pred = output["out"].data.cpu().numpy() if self.train_on_gpu else \
+                                                    output["out"].data.numpy()
+            gt = batch["sentiment"].data.cpu().numpy() if self.train_on_gpu \
+                else batch["sentiment"].data.numpy()
+            pc, p_val = self.metric(np.squeeze(pred, axis=1), gt)
             self.log("training.pearson_correlation", pc)
             self.log("training.pearson_correlation_p_val", p_val)
 
-    def run_evaluation_epoch(self, dataloader, mode="validation"):
+    def run_evaluation_epoch(self, dataloader, mode="validation",
+                             write_results=False):
         val_losses = []
         val_pcs = []
         for i_val, val_batch in dataloader:
-            val_loss, val_pc, val_p_val = self.evaluate(val_batch)
+            pred, gt, val_loss, val_pc, val_p_val = self.evaluate(val_batch)
             val_losses.append(val_loss)
             val_pcs.append(val_pc)
+            if write_results:
+                self.write_results_to_file(i_val, val_batch["text"], pred,
+                                           gt, mode)
             if i_val % 10 == 0:
                 self.logger.info("Epoch: {}\tGlobal Step: {}\t"
                                  "Mode: {}\tLoss: {}\tPC: {}\tBatch "
@@ -332,10 +307,13 @@ class BrahmaputraTrainer(Trainer):
         self.log("{}.average_pearson_correlation".format(mode), avg_pc)
         if mode == "validation":
             self.update_loss_history(avg_loss)
-        self.restart_dataloader()
+        self.restart_dataloader(mode)
 
-    def restart_dataloader(self):
-        pass
+    def restart_dataloader(self, mode):
+        self.dataloader[mode] = self.dataset.get_batch(split=mode,
+              to_tensor=True, pad=True, shuffle=False,
+              batch_size=self.batch_size, num_workers=self.n_workers,
+              seq_max_len=self.max_seq_length)
 
     def evaluate(self, batch):
         batch["inputs"] = batch["text"]
@@ -345,16 +323,20 @@ class BrahmaputraTrainer(Trainer):
         output = self.pipeline(batch)
         loss = self.loss(output["out"],
                          torch.unsqueeze(batch["sentiment"], dim=1))
-        pc, p_val = self.metric(np.squeeze(output["out"].data.cpu().numpy(),
-                                       axis=1),
-                         batch["sentiment"].data.cpu().numpy())
-        return loss.data.cpu().numpy()[0], pc, p_val
+        pred = output["out"].data.cpu().numpy() if self.train_on_gpu else \
+                                                output["out"].data.numpy()
+        gt = batch["sentiment"].data.cpu().numpy() if self.train_on_gpu else \
+                                            batch["sentiment"].data.numpy()
+        pc, p_val = self.metric(np.squeeze(pred, axis=1), gt)
+
+        scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
+        return pred, gt, scalar_loss, pc, p_val
 
     def load(self):
         self.logger.info("Trying to load checkpoint from '{}'".format(
                 self.best_model_path))
         if os.path.exists(self.best_model_path):
-            self.logger("Found checkpoint. Attemptimg to load it")
+            self.logger.info("Found checkpoint. Attemptimg to load it")
             checkpoint = torch.load(self.best_model_path)
             self.current_epoch = checkpoint['epoch']
             self.global_step = checkpoint['global_step']
@@ -383,7 +365,7 @@ class BrahmaputraTrainer(Trainer):
                 'best_loss': self.best_loss,
                 'optimizer': self.optimizer.state_dict(),
             }, checkpoint_path)
-            shutil.copyfile(checkpoint_path, 'best_model.pth.tar')
+            shutil.copyfile(checkpoint_path, self.best_model_path)
 
     def loss_has_improved(self):
         if self.no_improvement_since == 0:
@@ -409,7 +391,7 @@ class BrahmaputraTrainer(Trainer):
     def closure(self):
         self.writer.close()
 
-    def log(self, name, value):
+    def _get_scalar(self, value):
         if type(value) == np.ndarray:
             sacred_value = value
             tf_value = value
@@ -424,14 +406,102 @@ class BrahmaputraTrainer(Trainer):
         else:
             self.logger.warning("Unable to log values because of unknown "
                                 "dtype of the value")
-            return
+            sacred_value, tf_value = None, None
+        return float(sacred_value), tf_value
+
+    def log(self, name, value):
+        sacred_value, tf_value = self._get_scalar(value)
+        if sacred_value is None or tf_value is None:
+            self.logger.warning("Value could not be converted into the right "
+                                "format. This needs to be looked at.")
         self.sacred_run.log_scalar(name, sacred_value, self.global_step)
         self.writer.add_scalar(name.replace(".", "/"),  tf_value, self.global_step)
 
     def log_histogram(self):
         for name, param in self.pipeline.named_parameters():
-            self.writer.add_histogram(name, param.clone().cpu().data.numpy(),
-                                      self.global_step)
+            param_values = param.clone().cpu().data.numpy() if \
+                self.train_on_gpu else param.clone().data.numpy()
+            self.writer.add_histogram(name, param_values, self.global_step)
 
-    def write_results_to_file(self):
-        pass
+    def write_results_to_file(self, batch_id, batch, pred, gt, mode,
+                              tf_text=True):
+
+        file_path = os.path.join(self.experiment_config["{}_results".format(
+                mode)], "{}_epoch_{}_batch_{}.tsv".format(mode,
+                                      self.current_epoch, batch_id))
+        batch = batch.data.cpu().numpy().tolist() if self.train_on_gpu else \
+                                            batch.data.numpy().tolist()
+        text = self.sequence_decoder(batch)
+        with codecs.open(file_path, "w", "utf-8") as rf:
+            text_buff = []
+            for t, pred, gt in zip(text, pred, gt):
+                text_buff.append("{}\t{}\t{}".format(t, pred, gt))
+                rf.write(text_buff[-1] + "\n")
+                if tf_text:
+                    self.writer.add_text(mode, "\n".join(text_buff),
+                                         self.global_step)
+
+    def log_tf_embeddings(self):
+        self.writer.add_embedding(self.pipeline.get_embedding_weights(),
+                                  list(self.dataset.vocab["word"][0].keys()),
+                                  global_step=self.global_step,
+                                  tag="word_embeddings")
+
+
+def get_dataset_class(dataset_config):
+
+    if dataset_config["name"].lower() == "imdb":
+        ds = IMDB(mode="regression",
+                  use_spacy_vocab=dataset_config["use_spacy_vocab"],
+                  load_spacy_vectors=dataset_config["load_spacy_vectors"],
+                  spacy_model_name=dataset_config["spacy_model_name"],
+                  aux=["word"], cuda=dataset_config["cuda"],
+                  rescale=dataset_config["rescale"])
+    else:
+        raise NotImplementedError("{} dataset has not been "
+                                  "implemented".format(dataset_config["name"]))
+    return ds
+
+
+def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors):
+    pipeline = EmbeddingNgramCNNRNNRegression(vocab_size=vocab_size,
+          embedding_dims=pipeline_config["embedding_layer"]["embedding_dims"],
+          rnn_hidden_size=pipeline_config["rnn"]["rnn_hidden_size"],
+          bidirectional=pipeline_config["rnn"]["bidirectional"],
+          rnn_cell=pipeline_config["rnn"]["cell_type"],
+          rnn_layers=pipeline_config["rnn"]["rnn_layers"],
+          cnn_layers=pipeline_config["ngram_cnn"]["cnn_layers"],
+          cnn_kernel_dim=pipeline_config["ngram_cnn"]["cnn_kernel_dims"],
+          cnn_kernel_sizes=pipeline_config["ngram_cnn"]["cnn_kernel_sizes"],
+          padding_idx=0, pretrained_word_vectors=pretrained_word_vectors,
+          trainable_embeddings=pipeline_config["embedding_layer"]["train_embeddings"],
+          embedding_dropout=pipeline_config["embedding_layer"]["embedding_dropout"],
+          regression_activation=pipeline_config["regression"]["activation"],
+          cnn_dropout=pipeline_config["ngram_cnn"]["cnn_dropout"],
+          rnn_dropout=pipeline_config["rnn"]["rnn_dropout"])
+    return pipeline
+
+@ex.automain
+def run_pipeline(experiment_name, dataset, setup, pipeline,
+                 optimizer, experiment_config, _log, _run):
+    ds = get_dataset_class(dataset_config=dataset)
+    pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
+                            pretrained_word_vectors=ds.w2v)
+    trainer = BrahmaputraTrainer(experiment_name=experiment_name,
+                                 pipeline=pipeline, dataset=ds,
+                                 experiment_config=experiment_config,
+                                 logger=_log,
+                                 run=_run,
+                                 n_epochs=setup["epochs"],
+                                 batch_size=setup["batch_size"],
+                                 max_seq_length=dataset["max_seq_length"],
+                                 n_workers=dataset["n_workers"],
+                                 early_stopping_delta=setup[
+                                     "early_stopping_delta"],
+                                 patience=setup["patience"],
+                                 save_every=setup["save_every"],
+                                 evaluate_every=setup["evaluate_every"],
+                                 learning_rate=optimizer["learning_rate"],
+                                 weight_decay=optimizer["weight_decay"],
+                                 train_on_gpu=setup["train_on_gpu"])
+    trainer.run()

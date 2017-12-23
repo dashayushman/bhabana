@@ -39,8 +39,11 @@ class EmbeddingNgramCNNRNNRegression(nn.Module):
     def init_rnn_hidden(self, batch_size, cuda=False):
         return self.pipeline[2].init_hidden(batch_size, cuda)
 
-    def repackage_rnn_hidden(self, hidden, cuda=False):
-        return self.pipeline[2].repackage_hidden(hidden, cuda)
+    def repackage_rnn_hidden(self, hidden):
+        return self.pipeline[2].repackage_hidden(hidden)
+
+    def get_embedding_weights(self):
+        return self.pipeline[0].embedding.weight.clone().data.cpu()
 
     def forward(self, data):
         resp = {}

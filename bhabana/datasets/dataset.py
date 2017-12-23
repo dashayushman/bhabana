@@ -220,7 +220,7 @@ class Dataset():
                     if to_tensor and type == "sequence":
                         if self.cuda:
                             sample_batched[key] = Variable(torch.LongTensor(
-                                                sample_batched[key]).cuda())
+                                                sample_batched[key]).pin_memory().cuda())
                         else:
                             sample_batched[key] = Variable(torch.LongTensor(
                                     sample_batched[key]))
@@ -232,7 +232,7 @@ class Dataset():
                 elif (type == "label" or "length" in key) and to_tensor:
                     if self.cuda:
                         sample_batched[key] = Variable(torch.FloatTensor(
-                                                sample_batched[key]).cuda(),
+                                                sample_batched[key]).pin_memory().cuda(),
                                                        requires_grad=False)
                     else:
                         sample_batched[key] = Variable(torch.FloatTensor(

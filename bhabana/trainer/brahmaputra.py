@@ -266,7 +266,6 @@ class BrahmaputraTrainer(Trainer):
         loss = self.loss(output["out"],
                          torch.unsqueeze(batch["sentiment"], dim=1))
         scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
-        self.update_loss_history(scalar_loss)
         loss.backward()
         self.optimizer.step()
         self.log("training.loss", loss)
@@ -357,8 +356,8 @@ class BrahmaputraTrainer(Trainer):
               "checkpoints_dir"], "model_{}_{}.pth.tar".format(self.current_epoch,
                                                                self.global_step))
             torch.save({
-                'epoch': self.current_epoch + 1,
-                'global_step': self.global_step + 1,
+                'epoch': self.current_epoch,
+                'global_step': self.global_step,
                 'arch': self.experiment_name,
                 'state_dict': self.pipeline.state_dict(),
                 'best_loss': self.best_loss,

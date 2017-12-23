@@ -16,7 +16,7 @@ args = parser.parse_args()
 
 if args.name in THE_BOOK_OF_EXPERIMENTS:
     for i_c, config in enumerate(THE_BOOK_OF_EXPERIMENTS[args.name]):
-        if i_c == args.start_from-1:
+        if i_c >= args.start_from-1:
             config["experiment_name"] = config["experiment_name"] + str(i_c)
             brahmaputra.run(config_updates=config)
 else:

@@ -50,8 +50,16 @@ class Dataset():
                   "test": os.path.join(self.dataset_root_dir, "test"),
                   "validation": os.path.join(self.dataset_root_dir, "validation")}
         self.classes_path = os.path.join(self.dataset_root_dir, "classes.txt")
-        self.w2v_path = os.path.join(self.dataset_root_dir, "spacy_w2v.npy" if
-                                        self.load_spacy_vectors else "w2v.npy")
+        self._set_w2v_path()
+
+    def _set_w2v_path(self):
+        if self.load_spacy_vectors and not self.use_spacy_vocab:
+            self.w2v_path = os.path.join(self.dataset_root_dir, "spacy_w2v.npy")
+        elif self.load_spacy_vectors and self.use_spacy_vocab:
+            self.w2v_path = os.path.join(self.dataset_root_dir,
+                                         "spacy_w2v_spacy_vocab.npy")
+        else:
+            self.w2v_path = os.path.join(self.dataset_root_dir, "w2v.npy")
 
     def valid_aux(self, aux):
         ret = True

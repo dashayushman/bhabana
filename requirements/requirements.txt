@@ -12,3 +12,5 @@ sacredboard
 GitPython
 tensorboardX
 tensorflow
+scipy
+sklearn

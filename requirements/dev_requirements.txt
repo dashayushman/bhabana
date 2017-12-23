@@ -19,4 +19,6 @@ tensorboardX
 tensorflow
 sacredboard
 GitPython
+scipy
+sklearn
 -e .

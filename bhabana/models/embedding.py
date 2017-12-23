@@ -9,7 +9,8 @@ class Embedding(nn.Module):
         super(Embedding, self).__init__()
 
         self.vocab_size = vocab_size
-        self.embedding_dims = embedding_dims
+        self.embedding_dims = embedding_dims if pretrained_word_vectors is \
+                                None else pretrained_word_vectors.shape[-1]
         self.embedding = nn.Embedding(vocab_size, embedding_dims,
                                       padding_idx=padding_idx)
         self.dropout = nn.Dropout(dropout)

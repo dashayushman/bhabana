@@ -19,7 +19,13 @@ setup(
               "bhabana.datasets",
               "bhabana.models",
               "bhabana.utils",
-              "bhabana.tools"],
+              "bhabana.tools"
+              "bhabana.processing"
+              "bhabana.metrics"
+              "bhabana.pipeline",
+              "bhabana.processing"
+              "bhabana.servers"
+              "bhabana.trainer"],
 
     # Include additional files into the package
     include_package_data=True,

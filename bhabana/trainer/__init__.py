@@ -1,1 +1,2 @@
 from bhabana.trainer.trainer import Trainer
+from bhabana.trainer.training_configs import THE_BOOK_OF_EXPERIMENTS

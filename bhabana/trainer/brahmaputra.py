@@ -43,6 +43,7 @@ ex.observers.append(mongo_obs)
 def my_config():
 
     experiment_name = "SA_EMBED_NGRAM_CNN_RNN"
+    experiment_description = "default experiment"
     dataset = {
         "name": "IMDB",
         "n_workers": 1,
@@ -57,15 +58,13 @@ def my_config():
         "name": "brahmaputra",
         "epochs": 20,
         "batch_size": 64,
-        "max_time_steps": 30,
         "experiment_name": "{}".format(experiment_name),
         "experiment_root_dir": None,
-        "evaluate_every": 1,
+        "evaluate_every": 100,
         "save_every": 100,
         "early_stopping_delta": 0,
         "patience": 10,
-        "train_on_gpu": True,
-        "resume_from": None
+        "train_on_gpu": True
     }
     pipeline = {
         "embedding_layer": {

@@ -20,11 +20,11 @@ setup(
               "bhabana.models",
               "bhabana.utils",
               "bhabana.tools"
-              "bhabana.processing"
-              "bhabana.metrics"
+              "bhabana.processing",
+              "bhabana.metrics",
               "bhabana.pipeline",
-              "bhabana.processing"
-              "bhabana.servers"
+              "bhabana.processing",
+              "bhabana.servers",
               "bhabana.trainer"],
 
     # Include additional files into the package

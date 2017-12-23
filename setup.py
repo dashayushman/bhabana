@@ -19,7 +19,7 @@ setup(
               "bhabana.datasets",
               "bhabana.models",
               "bhabana.utils",
-              "bhabana.tools"
+              "bhabana.tools",
               "bhabana.processing",
               "bhabana.metrics",
               "bhabana.pipeline",

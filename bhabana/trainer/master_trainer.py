@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--name', type=str,
                     help='Name of the experiment that you ant to run. E.g., '
                          'brahmaputra, ganga, etc.')
-parser.add_argument('--start_from', type=int, default=0,
+parser.add_argument('--start_from', type=int, default=1,
                     help='Start')
 
 args = parser.parse_args()

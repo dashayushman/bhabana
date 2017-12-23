@@ -220,7 +220,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "lr_scheduling_milestones": [2, 7, 15, 19]
             }
         },
-{
+        {
             "experiment_name": "SA_EMBED_NGRAM_CNN_RNN",
             "experiment_description": "Train with preloaded spacy vectors. "
                                       "Here we see the impact of freezing the"

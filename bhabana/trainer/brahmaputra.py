@@ -442,8 +442,7 @@ class BrahmaputraTrainer(Trainer):
 
     def log_tf_embeddings(self):
         self.logger.info("Saving Embeddings for Projector Visualization")
-        ordered_i2w = collections.OrderedDict(sorted(self.dataset.items(
-                                            self.dataset.vocab["word"][1])))
+        ordered_i2w = collections.OrderedDict(sorted(self.dataset.vocab["word"][1].items()))
         labels = [val for key, val in ordered_i2w.iteritems()]
         self.writer.add_embedding(self.pipeline.get_embedding_weights(),
                                   labels, global_step=self.global_step,

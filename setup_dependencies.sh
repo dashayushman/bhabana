@@ -28,27 +28,14 @@ python -m spacy link en_vectors_web_lg en_vectors
 # Make sure to maintain the same directory structure
 
 if [ ! -d "~/.bhabana" ]; then
-    mkdir ~/.bhabana ~/.bhabana/datasets
+    mkdir ~/.bhabana ~/.bhabana/datasets ~/.bhabana/models
 fi
 
-
-if [ ! -d "~/.bhabana" ]; then
-    mkdir ~/.bhabana ~/.bhabana/datasets
-fi
-
-mkdir ~/.bhabana ~/.bhabana/datasets ~/.bhabana/models
 cd ~/.bhabana/datasets
 
-if [ ! -f /tmp/foo.txt ]; then
-    echo "File not found!"
-fi
-wget http://52.29.250.192:3000/datasets/hotel_reviews.tar.gz
-tar -xvzf hotel_reviews.tar.gz
-rm hotel_reviews.tar.gz
-
-wget http://52.29.250.192:3000/datasets/amazon_reviews_de.tar.gz
-tar -xvzf amazon_reviews_de.tar.gz
-rm amazon_reviews_de.tar.gz
+wget http://52.29.250.192:3000/datasets/imdb.tar.gz
+tar -xvzf imdb.tar.gz
+rm imdb.tar.gz
 
 # cd ~/
 

@@ -5,14 +5,14 @@ from bhabana.trainer.brahmaputra import ex as brahmaputra
 
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('name', metavar='n', type=str,
+parser.add_argument('--name', type=str,
                     help='Name of the experiment that you ant to run. E.g., '
                          'brahmaputra, ganga, etc.')
 
 args = parser.parse_args()
 
 
-if args.name in THE_BOOK_OF_EXPERIMENTS:
+if args.n in THE_BOOK_OF_EXPERIMENTS:
     for config in THE_BOOK_OF_EXPERIMENTS[args.name]:
         brahmaputra.run(config_updates=config)
 else:

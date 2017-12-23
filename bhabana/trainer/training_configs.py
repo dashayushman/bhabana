@@ -1,6 +1,7 @@
 THE_BOOK_OF_EXPERIMENTS = {
     "brahmaputra": [
         {
+            "experiment_name": "SA_EMBED_NGRAM_CNN_RNN",
             "experiment_description": "Train with preloaded spacy vectors. "
                                       "Here we see the impact of freezing the"
                                       " embedding layer. This is a regression "
@@ -53,6 +54,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             }
         },
         {
+            "experiment_name": "SA_EMBED_NGRAM_CNN_RNN",
             "experiment_description": "Train with preloaded spacy vectors. "
                                       "Here we see the impact of rescaling "
                                       "the ground truth to 0-1 and adding a "
@@ -107,6 +109,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             }
         },
         {
+            "experiment_name": "SA_EMBED_NGRAM_CNN_RNN",
             "experiment_description": "Train with preloaded spacy vectors. "
                                       "Here we see the impact of having a "
                                       "very small network. Rescaled GT with "
@@ -159,6 +162,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             }
         },
         {
+            "experiment_name": "SA_EMBED_NGRAM_CNN_RNN",
             "experiment_description": "Train with preloaded spacy vectors and "
                                       "using spacy's vocab. Here we also train"
                                       " the embeddings along with the "

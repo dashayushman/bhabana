@@ -228,12 +228,11 @@ class BrahmaputraTrainer(Trainer):
                 if self.time_to_evaluate(self.evaluate_every, i_train):
                     self.logger.info("Evaluating: mode=Validation")
                     self.run_evaluation_epoch(self.dataloader["validation"],
-                                              mode="validation",
-                                              write_results=True)
-                    self.log_tf_embeddings()
+                                              mode="validation")
                 if self.time_to_save(self.save_every, i_train):
                     self.save()
                 self.pipeline.train()
+            self._post_epoch_routine()
             self.scheduler.step(epoch)
             self.current_epoch += 1
             if self.time_to_stop:

@@ -1,6 +1,5 @@
 import os
 import json
-import time
 import torch
 import shutil
 import codecs
@@ -59,7 +58,7 @@ def my_config():
         "epochs": 20,
         "batch_size": 64,
         "max_time_steps": 30,
-        "experiment_name": "{}_{}".format(experiment_name, time.time()),
+        "experiment_name": "{}".format(experiment_name),
         "experiment_root_dir": None,
         "evaluate_every": 1,
         "save_every": 100,
@@ -113,7 +112,7 @@ def experiment_boilerplate(setup_config):
             experiment_config["experiment_dir"], "logs")
     experiment_config["test_results"] = os.path.join(
             experiment_config["experiment_dir"], "test_results")
-    experiment_config["val_results"] = os.path.join(
+    experiment_config["validation_results"] = os.path.join(
             experiment_config["experiment_dir"], "validation_results")
     experiment_config["train_results"] = os.path.join(
             experiment_config["experiment_dir"], "train_results")
@@ -230,7 +229,9 @@ class BrahmaputraTrainer(Trainer):
                 if self.time_to_evaluate(self.evaluate_every, i_train):
                     self.logger.info("Evaluating: mode=Validation")
                     self.run_evaluation_epoch(self.dataloader["validation"],
-                                              mode="validation")
+                                              mode="validation",
+                                              write_results=True)
+                    self.log_tf_embeddings()
                 if self.time_to_save(self.save_every, i_train):
                     self.save()
                 self.pipeline.train()
@@ -249,6 +250,7 @@ class BrahmaputraTrainer(Trainer):
         self.run_evaluation_epoch(self.dataloader["test"], mode="test",
                                   write_results=True)
         self.save()
+        self.log_tf_embeddings()
         self.pipeline.train()
         self.restart_dataloader("train")
 
@@ -262,7 +264,6 @@ class BrahmaputraTrainer(Trainer):
         batch["inputs"] = batch["text"]
         batch["training"] = True
         batch["hidden"] = self.get_rnn_hidden()
-        del batch["text"]
         output = self.pipeline(batch)
         loss = self.loss(output["out"],
                          torch.unsqueeze(batch["sentiment"], dim=1))
@@ -320,7 +321,6 @@ class BrahmaputraTrainer(Trainer):
         batch["inputs"] = batch["text"]
         batch["training"] = False
         batch["hidden"] = self.get_rnn_hidden()
-        del batch["text"]
         output = self.pipeline(batch)
         loss = self.loss(output["out"],
                          torch.unsqueeze(batch["sentiment"], dim=1))
@@ -443,6 +443,7 @@ class BrahmaputraTrainer(Trainer):
                                          self.global_step)
 
     def log_tf_embeddings(self):
+        self.logger.info("Saving Embeddings for Projector Visualization")
         self.writer.add_embedding(self.pipeline.get_embedding_weights(),
                                   list(self.dataset.vocab["word"][0].keys()),
                                   global_step=self.global_step,

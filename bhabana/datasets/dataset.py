@@ -5,9 +5,10 @@ import numpy as np
 import bhabana.utils as utils
 import bhabana.utils.data_utils as du
 
-from abc import abstractmethod
+from torch.autograd import Variable
 from bhabana.datasets import TextDataset
 from torch.utils.data.dataloader import DataLoader
+
 
 class Dataset():
 
@@ -32,11 +33,10 @@ class Dataset():
         self._load_w2is()
         self._load_classes()
         self.w2v = self._load_word_vectors() if load_spacy_vectors else None
-        self.FloatTensor = torch.cuda.FloatTensor if self.cuda else torch.FloatTensor
-        self.LongTensor = torch.cuda.LongTensor if self.cuda else torch.LongTensor
         self.train = None
         self.test = None
         self.validation = None
+        self.dataloaders = {"train": None, "test": None, "validation": None}
 
     def _boilerplate(self):
         self.dataset_root_dir = os.path.join(utils.DATASET_DIR,self. name)
@@ -172,25 +172,40 @@ class Dataset():
         if split == "train" and self.train is not None:
             dataloader = DataLoader(self.train, batch_size=batch_size,
                                     shuffle=shuffle, num_workers=num_workers,
-                                    collate_fn=collate_batch)
+                                    collate_fn=collate_batch,
+                                    drop_last=True)
         elif split == "test" and self.test is not None:
             dataloader = DataLoader(self.test, batch_size=batch_size,
                                     shuffle=shuffle, num_workers=num_workers,
-                                    collate_fn=collate_batch)
+                                    collate_fn=collate_batch,
+                                    drop_last=True)
         elif split == "validation" and self.validation is not None:
             dataloader = DataLoader(self.validation, batch_size=batch_size,
                                     shuffle=shuffle, num_workers=num_workers,
-                                    collate_fn=collate_batch)
+                                    collate_fn=collate_batch,
+                                    drop_last=True)
         else:
             raise Exception("This dataset does not have a {} split".format(split))
         return dataloader
 
-    def get_batch(self, split="train", to_tensor=True, pad=True, num_workers=1,
-                  shuffle=True, batch_size=32, seq_max_len=0):
-        dataloader = self._get_data_loader_for_split(split=split,
+    def _get_dataloader(self, split, num_workers=1, shuffle=True,
+                        batch_size=32):
+        if split in self.dataloaders:
+            if self.dataloaders[split] is None:
+                self.dataloaders[split] = self._get_data_loader_for_split(split=split,
                                                      batch_size=batch_size,
                                                      shuffle=shuffle,
                                                      num_workers=num_workers)
+                return self.dataloaders[split]
+            else:
+                return self.dataloaders[split]
+        else:
+            raise Exception("Invalid SPlit {}".format(split))
+
+
+    def get_batch(self, split="train", to_tensor=True, pad=True, num_workers=1,
+                  shuffle=True, batch_size=32, seq_max_len=0):
+        dataloader = self._get_dataloader(split, num_workers, shuffle,batch_size)
         for i_batch, sample_batched in enumerate(dataloader):
             for key, type in self.provides:
                 if "length" not in key and pad and type not in ["label"]:
@@ -203,14 +218,25 @@ class Dataset():
                     sample_batched[key] = du.pad_sequences(
                                     sample_batched[key], padlen=max_len)
                     if to_tensor and type == "sequence":
-                        sample_batched[key] = self.LongTensor(sample_batched[key])
+                        if self.cuda:
+                            sample_batched[key] = Variable(torch.LongTensor(
+                                                sample_batched[key]).pin_memory().cuda())
+                        else:
+                            sample_batched[key] = Variable(torch.LongTensor(
+                                    sample_batched[key]))
                     else:
                         raise Exception("{} type of fields are not supported "
                                         "or it is an invalid field type. "
                                         "Valid field types are 'sequence' and "
                                                     "'label'".format(type))
                 elif (type == "label" or "length" in key) and to_tensor:
-                    sample_batched[key] = self.FloatTensor(sample_batched[key])
+                    if self.cuda:
+                        sample_batched[key] = Variable(torch.FloatTensor(
+                                                sample_batched[key]).pin_memory().cuda(),
+                                                       requires_grad=False)
+                    else:
+                        sample_batched[key] = Variable(torch.FloatTensor(
+                                sample_batched[key]), requires_grad=False)
 
             yield i_batch, sample_batched
 

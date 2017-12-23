@@ -61,8 +61,6 @@ class TestEMbeddingNgramCNNRNNRegressionPipeline:
         assert_true("3.RecurrentBlock.out" in response)
         assert_true("3.RecurrentBlock.aux" in response)
         assert_true("4.Regressor.out" in response)
-        assert_true("inputs" in response)
-        assert_true("hidden" in response)
 
 
     def test_valid_forward(self):

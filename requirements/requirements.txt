@@ -9,3 +9,6 @@ matplotlib
 pymongo
 progressbar2
 sacredboard
+GitPython
+tensorboardX
+tensorflow

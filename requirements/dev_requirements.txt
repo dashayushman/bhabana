@@ -18,4 +18,5 @@ sphinx-autobuild
 tensorboardX
 tensorflow
 sacredboard
+GitPython
 -e .

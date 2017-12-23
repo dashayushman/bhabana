@@ -15,7 +15,7 @@ class EmbeddingNgramCNNRNNRegression(nn.Module):
                  regression_activation=None, cnn_dropout=0.5, rnn_dropout=0.5):
         super(EmbeddingNgramCNNRNNRegression, self).__init__()
         
-
+        self.rnn_hidden_size = rnn_hidden_size
         self.pipeline = nn.ModuleList([Embedding(vocab_size=vocab_size,
                                                  embedding_dims=embedding_dims,
                                                  padding_idx=padding_idx,
@@ -36,14 +36,17 @@ class EmbeddingNgramCNNRNNRegression(nn.Module):
                            Regressor(input_size=rnn_hidden_size,
                                      activation=regression_activation)])
 
-    def init_rnn_hidden(self, batch_size):
-        return self.pipeline[2].init_hidden(batch_size)
+    def init_rnn_hidden(self, batch_size, cuda=False):
+        return self.pipeline[2].init_hidden(batch_size, cuda)
 
     def repackage_rnn_hidden(self, hidden):
         return self.pipeline[2].repackage_hidden(hidden)
 
+    def get_embedding_weights(self):
+        return self.pipeline[0].embedding.weight.clone().data.cpu()
+
     def forward(self, data):
-        resp = data.copy()
+        resp = {}
         for i_m, module in enumerate(self.pipeline):
             layer_resp = module(data)
             resp["{}.{}.out".format(i_m+1, type(module).__name__)] = layer_resp["out"]

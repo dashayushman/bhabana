@@ -28,11 +28,11 @@ class TestTokenizer:
     def test_char_tokenizer(self):
         text = "Hallo, ich"
         tokenizer = Tokenizer(lang="de", mode="char")
-        semhash_tokens = tokenizer.process(text)
-        assert_equals(len(semhash_tokens), 10)
-        assert_equals(semhash_tokens[6], constants.SPACE_WORD)
-        assert_equals(semhash_tokens[0], 'H')
-        assert_equals(semhash_tokens[-1], 'h')
+        char_tokens = tokenizer.process(text)
+        assert_equals(len(char_tokens), 10)
+        assert_equals(char_tokens[6], constants.SPACE_WORD)
+        assert_equals(char_tokens[0], 'H')
+        assert_equals(char_tokens[-1], 'h')
 
     def test_word_tokenizer_de(self):
         text = "Hallo, ich"

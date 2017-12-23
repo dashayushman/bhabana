@@ -114,7 +114,7 @@ def experiment_boilerplate(setup_config):
     experiment_config["test_results"] = os.path.join(
             experiment_config["experiment_dir"], "test_results")
     experiment_config["val_results"] = os.path.join(
-            experiment_config["experiment_dir"], "val_results")
+            experiment_config["experiment_dir"], "validation_results")
     experiment_config["train_results"] = os.path.join(
             experiment_config["experiment_dir"], "train_results")
 
@@ -244,9 +244,10 @@ class BrahmaputraTrainer(Trainer):
         self.pipeline.eval()
         self.logger.info("Evaluating: mode=Validation")
         self.run_evaluation_epoch(self.dataloader["validation"],
-                                  mode="validation")
+                                  mode="validation", write_results=True)
         self.logger.info("Evaluating: mode=Test")
-        self.run_evaluation_epoch(self.dataloader["test"], mode="test")
+        self.run_evaluation_epoch(self.dataloader["test"], mode="test",
+                                  write_results=True)
         self.save()
         self.pipeline.train()
         self.restart_dataloader("train")

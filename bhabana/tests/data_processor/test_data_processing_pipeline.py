@@ -29,9 +29,12 @@ class TestDataProcessor:
         seq2id = Seq2Id(self.w2i, seq_begin=True, seq_end=True)
         pipeline = [tokenizer, seq2id]
         dpp = DataProcessingPipeline(pipeline, name="my_pipeline",
-                                          add_to_output=False)
+                                          add_to_output=True, add_length=True)
         out = dpp.run(test_text)
+        assert_true("my_pipeline" in out)
+        assert_true("my_pipeline_length" in out)
         assert_not_equals(out, None)
+        out = out["my_pipeline"]
         assert_equals(len(out), 6)
         assert_equals(out[0], constants.BOS)
         assert_equals(out[1], self.w2i["Hallo"])

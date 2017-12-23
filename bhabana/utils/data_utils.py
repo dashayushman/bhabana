@@ -711,7 +711,7 @@ def char_tokenize(text):
     chars = list(text)
     for i_c, char in enumerate(chars):
         if char == " ":
-            chars[i_c] = constants.SPACE
+            chars[i_c] = constants.SPACE_WORD
     return chars
 
 

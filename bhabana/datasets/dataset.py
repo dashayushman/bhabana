@@ -111,10 +111,10 @@ class Dataset():
                 du.write_spacy_aux_vocab(self.vocab_paths[aux], self.lang, aux)
 
     def _load_spacy_vocabulary(self):
-        self.vocab["word"] = os.path.join(self.dataset_root_dir,
+        self.vocab_paths["word"] = os.path.join(self.dataset_root_dir,
                                           "spacy_word_vocab.txt")
-        du.write_spacy_vocab(self.vocab["word"], self.lang,
-                             model_name=self.spacy_model_name)
+        du.write_spacy_vocab(self.vocab_paths["word"], self.lang,
+                                         model_name=self.spacy_model_name)
 
     def _load_w2is(self):
         self.vocab = {

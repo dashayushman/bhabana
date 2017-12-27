@@ -1,5 +1,5 @@
 from bhabana.models import Bottle
-from bhabana.models import Linear
+from bhabana.models import TransLinear as Linear
 
 
 class BottleLinear(Bottle, Linear):

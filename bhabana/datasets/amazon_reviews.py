@@ -2,36 +2,38 @@ from bhabana.processing import *
 from bhabana.datasets import Dataset
 
 
-class IMDB(Dataset):
+class AmazonReviews(Dataset):
 
-    def __init__(self, mode="regression",
+    def __init__(self, name="amazon_reviews_imbalanced_de",
+                 lang="de", mode="regression",
                  use_spacy_vocab=True, load_spacy_vectors=False,
                  spacy_model_name=None, aux=[], cuda=True, rescale=None):
-        super(IMDB, self).__init__("imdb", lang="en", size="medium",
-                   mode=mode, use_spacy_vocab=use_spacy_vocab,
+        super(AmazonReviews, self).__init__(name,
+                lang=lang, size="large", mode=mode,
+                    use_spacy_vocab=use_spacy_vocab,
                        load_spacy_vectors=load_spacy_vectors,
                             spacy_model_name=spacy_model_name,
                                    aux=aux, cuda=cuda, rescale=rescale)
         self.fields = self._load_fields()
         self.line_processor = JSONLineProcessor(self.fields)
-        super(IMDB, self).set_provides(self.fields)
-        super(IMDB, self).set_fields(self.fields)
-        super(IMDB, self).initialize_splits(self.line_processor)
+        super(AmazonReviews, self).set_provides(self.fields)
+        super(AmazonReviews, self).set_fields(self.fields)
+        super(AmazonReviews, self).initialize_splits(self.line_processor)
 
     def _load_fields(self):
         return [
             {
-                "key": "text", "dtype": str, "type": "sequence",
+                "key": "review_text", "dtype": str, "type": "sequence",
                 "processors":self._get_text_processing_pipelines()
             },
             {
-                "key": "sentiment", "dtype": int, "type": "label",
+                "key": "review_rating", "dtype": int, "type": "label",
                 "processors": DataProcessingPipeline(self._get_pipeline(
                         type="regression"), name="sentiment",
                         add_to_output=True)
             },
             {
-                "key": "label", "dtype": str, "type": "onehot_label",
+                "key": "review_rating", "dtype": str, "type": "onehot_label",
                 "processors": DataProcessingPipeline(self._get_pipeline(
                         type="classification"), name="label",
                         add_to_output=True)

@@ -375,61 +375,6 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "lr_scheduling_milestones": [2, 7, 15, 19]
             }
         },
-        """
-        {
-            "experiment_name": "SA_EMBED_NGRAM_CNN_RNN_CLASSIFICATION",
-            "experiment_description": "Train with preloaded spacy vectors and "
-                                      "use spacy's vocab. Here we also train"
-                                      " the embeddings along with the "
-                                      "network. Medium sized network. Weight "
-                                      "decay",
-            "dataset": {
-                "name": "IMDB",
-                "n_workers": 9,
-                "use_spacy_vocab": True,
-                "load_spacy_vectors": True,
-                "max_seq_length": 300,
-                "cuda": True
-            },
-            "setup": {
-                "epochs": 30,
-                "batch_size": 32,
-                "evaluate_every": 450,
-                "save_every": 450,
-                "early_stopping_delta": 0.0,
-                "patience": 12,
-                "train_on_gpu": True,
-                "save_embeddings": True
-            },
-            "pipeline": {
-                "embedding_layer": {
-                    "embedding_dims": 300,
-                    "embedding_dropout": 0.5,
-                    "preload_word_vectors": True,
-                    "train_embeddings": True
-                },
-                "ngram_cnn": {
-                    "cnn_kernel_dims": 600,
-                    "cnn_kernel_sizes": [3, 5, 9, 13, 20],
-                    "cnn_layers": 1,
-                    "cnn_dropout": 0.5
-                },
-                "rnn": {
-                    "rnn_hidden_size": 1200,
-                    "rnn_layers": 3,
-                    "bidirectional": True,
-                    "rnn_dropout": 0.5,
-                    "cell_type": "gru"
-                }
-            },
-            "optimizer" : {
-                "learning_rate": 0.001,
-                "weight_decay": 0.00001,
-                "lr_scheduling_milestones": [2, 7, 15, 19]
-            }
-        }
-        """
-        ,
         {
             "experiment_name": "SA_EMBED_NGRAM_CNN_RNN_CLASSIFICATION",
             "experiment_description": "Train with preloaded spacy vectors. "
@@ -522,6 +467,50 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "bidirectional": True,
                     "rnn_dropout": 0.5,
                     "cell_type": "gru"
+                }
+            },
+            "optimizer" : {
+                "learning_rate": 0.001,
+                "weight_decay": 0.00001,
+                "lr_scheduling_milestones": [2, 7, 15, 19]
+            }
+        }
+    ],
+    "ganga": [
+            {
+            "experiment_name": "SA_TRANSFORMER_REGRESSION",
+            "experiment_description": "Train large Transformer Network with "
+                                      "fixed embeddings. Regression, "
+                                      "No Rescale",
+            "dataset": {
+                "name": "imdb",
+                "n_workers": 1,
+                "load_spacy_vectors": False,
+                "max_seq_length": 100,
+                "cuda": True
+            },
+            "setup": {
+                "epochs": 30,
+                "batch_size": 32,
+                "evaluate_every": 450,
+                "save_every": 450,
+                "early_stopping_delta": 0.0,
+                "patience": 10,
+                "train_on_gpu": True,
+                "save_embeddings": False
+            },
+            "pipeline": {
+                "transformer": {
+                    "embedding_dims": 50,
+                    "dropout": 0.1,
+                    "preload_word_vectors": True,
+                    "trainable_embeddings": False,
+                    "d_inner_hid": 50,
+                    "n_layers": 2,
+                    "n_head": 3
+                },
+                "regression": {
+                    "activation": "sigmoid"
                 }
             },
             "optimizer" : {

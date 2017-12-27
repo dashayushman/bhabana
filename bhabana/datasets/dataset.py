@@ -141,6 +141,10 @@ class Dataset():
                         self.provides.append(
                                 ("{}_length".format(processor.name),
                                  field["type"]))
+                    if processor.add_position:
+                        self.provides.append(
+                                ("{}_position".format(processor.name),
+                                 field["type"]))
             else:
                 self.provides.append((field["processors"].name,
                                      field["type"]))
@@ -209,7 +213,6 @@ class Dataset():
                 return self.dataloaders[split]
         else:
             raise Exception("Invalid SPlit {}".format(split))
-
 
     def get_batch(self, split="train", to_tensor=True, pad=True, num_workers=1,
                   shuffle=True, batch_size=32, seq_max_len=0):

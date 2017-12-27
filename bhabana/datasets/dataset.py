@@ -216,7 +216,8 @@ class Dataset():
         dataloader = self._get_dataloader(split, num_workers, shuffle,batch_size)
         for i_batch, sample_batched in enumerate(dataloader):
             for key, type in self.provides:
-                if "length" not in key and pad and type not in ["label"]:
+                if "length" not in key and pad and type not in ["label",
+                                                                "onehot_label"]:
                     if seq_max_len != 0:
                         max_len = seq_max_len
                     else:
@@ -244,6 +245,14 @@ class Dataset():
                                                        requires_grad=False)
                     else:
                         sample_batched[key] = Variable(torch.FloatTensor(
+                                sample_batched[key]), requires_grad=False)
+                elif (type == "onehot_label") and to_tensor:
+                    if self.cuda:
+                        sample_batched[key] = Variable(torch.LongTensor(
+                                                sample_batched[key]).pin_memory().cuda(),
+                                                       requires_grad=False)
+                    else:
+                        sample_batched[key] = Variable(torch.LongTensor(
                                 sample_batched[key]), requires_grad=False)
 
             yield i_batch, sample_batched

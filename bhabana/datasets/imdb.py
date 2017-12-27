@@ -31,7 +31,7 @@ class IMDB(Dataset):
                         add_to_output=True)
             },
             {
-                "key": "label", "dtype": str, "type": "label",
+                "key": "label", "dtype": str, "type": "onehot_label",
                 "processors": DataProcessingPipeline(self._get_pipeline(
                         type="classification"), name="label",
                         add_to_output=True)

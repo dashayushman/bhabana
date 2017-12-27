@@ -285,7 +285,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             "dataset": {
                 "name": "IMDB",
                 "n_workers": 10,
-                "load_spacy_vectors": False,
+                "load_spacy_vectors": True,
                 "max_seq_length": 400,
                 "cuda": True
             },

@@ -165,6 +165,6 @@ if args.max_vocab_size is not None:
   word_with_counts = word_with_counts[:args.max_vocab_size]
 
 
-with open('vocab.txt', 'w') as vf:
+with open('{}_{}_vocab.txt'.format(args.mode, args.lang), 'w') as vf:
   for word, count in word_with_counts:
     vf.write("{}\t{}\n".format(word, count))

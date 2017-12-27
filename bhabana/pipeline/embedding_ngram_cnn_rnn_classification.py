@@ -34,7 +34,7 @@ class EmbeddingNgramCNNRNNClassification(nn.Module):
                                          dropout=rnn_dropout,
                                          return_sequence=False),
                            Linear(rnn_hidden_size, n_classes, bias=True,
-                                  activation="softmax")])
+                                  activation=None)])
 
     def init_rnn_hidden(self, batch_size, cuda=False):
         return self.pipeline[2].init_hidden(batch_size, cuda)

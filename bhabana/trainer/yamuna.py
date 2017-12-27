@@ -40,7 +40,7 @@ with open(mongo_config_file_path, "r") as jf:
 slack_obs = SlackObserver.from_config(slack_config_file_path)
 ex = Experiment('sentiment_analysis')
 ex.observers.append(slack_obs)
-#ex.observers.append(mongo_obs)
+ex.observers.append(mongo_obs)
 
 @ex.config
 def my_config():

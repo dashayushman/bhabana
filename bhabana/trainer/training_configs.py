@@ -478,20 +478,20 @@ THE_BOOK_OF_EXPERIMENTS = {
     ],
     "ganga": [
         {
-            "experiment_name": "SA_TRANSFORMER_REGRESSION",
+            "experiment_name": "SA_TRANSFORMER_REGRESSION_NEW",
             "experiment_description": "Train large Transformer Network with "
                                       "fixed embeddings. Regression, "
                                       "No Rescale. IMDB",
             "dataset": {
                 "name": "imdb",
-                "n_workers": 5,
+                "n_workers": 7,
                 "load_spacy_vectors": True,
-                "max_seq_length": 150,
+                "max_seq_length": 200,
                 "cuda": True
             },
             "setup": {
                 "epochs": 30,
-                "batch_size": 32,
+                "batch_size": 64,
                 "evaluate_every": 500,
                 "save_every": 500,
                 "early_stopping_delta": 0.0,
@@ -521,7 +521,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 }
             },
             "optimizer" : {
-                "learning_rate": 0.0001,
+                "learning_rate": 0.001,
                 "weight_decay": 0.00001,
                 "lr_scheduling_milestones": [2, 7, 15, 19]
             }
@@ -533,9 +533,9 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "No Rescale. IMDB. Train Embeddings",
             "dataset": {
                 "name": "imdb",
-                "n_workers": 5,
+                "n_workers": 7,
                 "load_spacy_vectors": True,
-                "max_seq_length": 150,
+                "max_seq_length": 200,
                 "cuda": True
             },
             "setup": {
@@ -551,12 +551,19 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "transformer": {
                     "embedding_dims": 300,
-                    "dropout": 0.1,
+                    "dropout": 0.5,
                     "preload_word_vectors": True,
                     "trainable_embeddings": True,
-                    "d_inner_hid": 1024,
-                    "n_layers": 6,
-                    "n_head": 8
+                    "d_inner_hid": 256,
+                    "n_layers": 3,
+                    "n_head": 4
+                },
+                "rnn": {
+                    "rnn_hidden_size": 256,
+                    "rnn_layers": 1,
+                    "bidirectional": True,
+                    "rnn_dropout": 0.5,
+                    "cell_type": "gru"
                 },
                 "regression": {
                     "activation": "relu"
@@ -569,16 +576,16 @@ THE_BOOK_OF_EXPERIMENTS = {
             }
         },
         {
-            "experiment_name": "SA_TRANSFORMER_REGRESSION",
+            "experiment_name": "SA_TRANSFORMER_REGRESSION_NEW",
             "experiment_description": "Train large Transformer Network with "
                                       "fixed embeddings. Regression, "
                                       "Rescale. IMDB",
             "dataset": {
                 "name": "imdb",
-                "n_workers": 5,
+                "n_workers": 7,
                 "load_spacy_vectors": True,
                 "rescale": (0, 1),
-                "max_seq_length": 400,
+                "max_seq_length": 200,
                 "cuda": True
             },
             "setup": {
@@ -594,12 +601,19 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "transformer": {
                     "embedding_dims": 300,
-                    "dropout": 0.1,
+                    "dropout": 0.5,
                     "preload_word_vectors": True,
                     "trainable_embeddings": False,
-                    "d_inner_hid": 1024,
-                    "n_layers": 6,
-                    "n_head": 8
+                    "d_inner_hid": 256,
+                    "n_layers": 3,
+                    "n_head": 4
+                },
+                "rnn": {
+                    "rnn_hidden_size": 256,
+                    "rnn_layers": 1,
+                    "bidirectional": True,
+                    "rnn_dropout": 0.5,
+                    "cell_type": "gru"
                 },
                 "regression": {
                     "activation": "relu"
@@ -614,7 +628,7 @@ THE_BOOK_OF_EXPERIMENTS = {
     ],
     "kanyakumari": [
         {
-            "experiment_name": "SA_TRANSFORMER_CLASSIFICATION",
+            "experiment_name": "SA_TRANSFORMER_CLASSIFICATION_NEW",
             "experiment_description": "Train large Transformer Network with "
                                       "fixed embeddings. Classification, "
                                       "IMDB",
@@ -622,14 +636,14 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "name": "imdb",
                 "n_workers": 7,
                 "load_spacy_vectors": True,
-                "max_seq_length": 50,
+                "max_seq_length": 200,
                 "cuda": True
             },
             "setup": {
                 "epochs": 30,
                 "batch_size": 32,
-                "evaluate_every": 1000,
-                "save_every": 1000,
+                "evaluate_every": 450,
+                "save_every": 450,
                 "early_stopping_delta": 0.0,
                 "patience": 10,
                 "train_on_gpu": True,
@@ -638,9 +652,9 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "transformer": {
                     "embedding_dims": 300,
-                    "dropout": 0.3,
+                    "dropout": 0.5,
                     "preload_word_vectors": True,
-                    "trainable_embeddings": True,
+                    "trainable_embeddings": False,
                     "d_inner_hid": 256,
                     "n_layers": 3,
                     "n_head": 4
@@ -660,13 +674,13 @@ THE_BOOK_OF_EXPERIMENTS = {
             }
         },
         {
-            "experiment_name": "SA_TRANSFORMER_CLASSIFICATION",
+            "experiment_name": "SA_TRANSFORMER_CLASSIFICATION_NEW",
             "experiment_description": "Train large Transformer Network with "
                                       "train embeddings. Classification, "
                                       ". IMDB",
             "dataset": {
                 "name": "imdb",
-                "n_workers": 5,
+                "n_workers": 7,
                 "load_spacy_vectors": True,
                 "max_seq_length": 300,
                 "cuda": True
@@ -684,12 +698,19 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "transformer": {
                     "embedding_dims": 300,
-                    "dropout": 0.3,
+                    "dropout": 0.5,
                     "preload_word_vectors": True,
                     "trainable_embeddings": True,
-                    "d_inner_hid": 512,
+                    "d_inner_hid": 256,
                     "n_layers": 3,
                     "n_head": 4
+                },
+                "rnn": {
+                    "rnn_hidden_size": 256,
+                    "rnn_layers": 1,
+                    "bidirectional": True,
+                    "rnn_dropout": 0.5,
+                    "cell_type": "gru"
                 },
                 "regression": {
                     "activation": "relu"

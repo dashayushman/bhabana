@@ -40,6 +40,9 @@ class TransformerRegressor(nn.Module):
         return (p for p in self.parameters() if (id(p) not in
                 freezed_param_ids) or p.requires_grad == True)
 
+    def get_embedding_weights(self):
+        return self.encoder.src_word_emb.weight.clone().data.cpu()
+
     def forward(self, data):
         src_seq, src_pos = data["text"], data["text_position"]
 

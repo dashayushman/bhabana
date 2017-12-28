@@ -79,6 +79,13 @@ def my_config():
             "d_inner_hid": 1024,
             "n_layers": 6,
             "n_head": 8
+        },
+        "rnn": {
+            "rnn_hidden_size": 50,
+            "rnn_layers": 1,
+            "bidirectional": True,
+            "rnn_dropout": 0.5,
+            "cell_type": "lstm"
         }
     }
     optimizer = {
@@ -200,8 +207,9 @@ class KanyakumariTrainer(Trainer):
 
     def _set_optimizer(self):
         self.logger.info("Initializing the Optimizer")
-        trainable_parameters= filter(lambda p: p.requires_grad,
-                                     self.pipeline.parameters())
+        trainable_parameters = self.pipeline.get_trainable_parameters()
+        trainable_parameters = filter(lambda p: p.requires_grad,
+                                      trainable_parameters)
         self.optimizer = optim.Adam(trainable_parameters,
                                lr=self.learning_rate,
                                weight_decay=self.weight_decay)
@@ -248,11 +256,16 @@ class KanyakumariTrainer(Trainer):
         self.pipeline.train()
         self.restart_dataloader("train")
 
+    def get_rnn_hidden(self):
+        hidden = self.pipeline.init_rnn_hidden(self.batch_size,
+                                               self.train_on_gpu)
+        return hidden
 
     def train(self, batch):
         self.pipeline.zero_grad()
         batch["inputs"] = batch["text"]
         batch["training"] = True
+        batch["hidden"] = self.get_rnn_hidden()
         output = self.pipeline(batch)
         loss = self.loss(output["out"], torch.max(batch["label"], 1)[1])
         scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
@@ -310,6 +323,8 @@ class KanyakumariTrainer(Trainer):
     def evaluate(self, batch):
         batch["inputs"] = batch["text"]
         batch["training"] = False
+
+        batch["hidden"] = self.get_rnn_hidden()
         output = self.pipeline(batch)
         loss = self.loss(output["out"], torch.max(batch["label"], dim=1)[1])
         pred = output["out"].data.cpu().numpy() if self.train_on_gpu else \
@@ -479,7 +494,19 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
                                     d_inner_hid=pipeline_config["transformer"]["d_inner_hid"],
                                     dropout=pipeline_config["transformer"]["dropout"],
                                     pretrained_word_vectors=pretrained_word_vectors,
-                                    trainable_embeddings=pipeline_config["transformer"]["trainable_embeddings"])
+                                    trainable_embeddings=pipeline_config[
+                                        "transformer"]["trainable_embeddings"],
+                                     rnn_hidden_size=pipeline_config["rnn"][
+                                         "rnn_hidden_size"],
+                                     bidirectional=pipeline_config["rnn"][
+                                         "bidirectional"],
+                                     rnn_layers=pipeline_config["rnn"][
+                                         "rnn_layers"],
+                                     rnn_dropout=pipeline_config["rnn"][
+                                         "rnn_dropout"],
+                                     rnn_cell=pipeline_config["rnn"][
+                                         "cell_type"]
+                                     )
     return pipeline
 
 @ex.automain

@@ -16,10 +16,12 @@ python -m spacy link en_core_web_lg en
 python -m spacy link de_core_news_sm de
 python -m spacy link en_vectors_web_lg en_vectors
 
+pip install -e .
+
 # If you want to test if everything is fine then you can run the following
 # script
 
-nosetests
+# nosetests
 
 # Download the datasets to start training ASAP
 # You can alternatively use the downloader API in Bhabana, but the following

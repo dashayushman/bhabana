@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from bhabana.models import Encoder
 from bhabana.models import Regressor
-from bhabana.models import Linear
 from bhabana.models import RecurrentBlock
 
 

@@ -620,16 +620,16 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "IMDB",
             "dataset": {
                 "name": "imdb",
-                "n_workers": 5,
+                "n_workers": 7,
                 "load_spacy_vectors": True,
-                "max_seq_length": 300,
+                "max_seq_length": 50,
                 "cuda": True
             },
             "setup": {
                 "epochs": 30,
                 "batch_size": 32,
-                "evaluate_every": 450,
-                "save_every": 450,
+                "evaluate_every": 1000,
+                "save_every": 1000,
                 "early_stopping_delta": 0.0,
                 "patience": 10,
                 "train_on_gpu": True,
@@ -640,10 +640,17 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "embedding_dims": 300,
                     "dropout": 0.3,
                     "preload_word_vectors": True,
-                    "trainable_embeddings": False,
-                    "d_inner_hid": 512,
+                    "trainable_embeddings": True,
+                    "d_inner_hid": 256,
                     "n_layers": 3,
                     "n_head": 4
+                },
+                "rnn": {
+                    "rnn_hidden_size": 256,
+                    "rnn_layers": 1,
+                    "bidirectional": True,
+                    "rnn_dropout": 0.5,
+                    "cell_type": "gru"
                 }
             },
             "optimizer": {

@@ -39,7 +39,7 @@ with open(mongo_config_file_path, "r") as jf:
 slack_obs = SlackObserver.from_config(slack_config_file_path)
 ex = Experiment('sentiment_analysis')
 ex.observers.append(slack_obs)
-#ex.observers.append(mongo_obs)
+ex.observers.append(mongo_obs)
 
 @ex.config
 def my_config():
@@ -472,7 +472,10 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
                                     d_inner_hid=pipeline_config["transformer"]["d_inner_hid"],
                                     dropout=pipeline_config["transformer"]["dropout"],
                                     pretrained_word_vectors=pretrained_word_vectors,
-                                    trainable_embeddings=pipeline_config["transformer"]["trainable_embeddings"])
+                                    trainable_embeddings=pipeline_config[
+                                        "transformer"]["trainable_embeddings"],
+                                    regression_activation=pipeline_config[
+                                        "regression"]["activation"])
     return pipeline
 
 @ex.automain

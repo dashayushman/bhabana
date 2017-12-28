@@ -4,6 +4,7 @@ from bhabana.trainer import THE_BOOK_OF_EXPERIMENTS
 from bhabana.trainer.brahmaputra import ex as brahmaputra
 from bhabana.trainer.yamuna import ex as yamuna
 from bhabana.trainer.ganga import ex as ganga
+from bhabana.trainer.kanyakumari import ex as kanyakumari
 
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -24,6 +25,8 @@ def get_experiment_by_name(name):
         return yamuna
     elif name == "ganga":
         return ganga
+    elif name == "kanyakumari":
+        return kanyakumari
     else:
         raise NotImplementedError("This ({}) Experiment template has not been "
                                   "implemented".format(name))

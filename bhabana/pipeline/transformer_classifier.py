@@ -6,15 +6,14 @@ from bhabana.models import Regressor
 from bhabana.models import Linear
 
 
-class TransformerRegressor(nn.Module):
+class TransformerClassifier(nn.Module):
     ''' A sequence to sequence model with attention mechanism. '''
 
     def __init__(
-            self, n_src_vocab, n_max_seq, n_layers=6, n_head=8,
+            self, n_src_vocab, n_max_seq, n_classes, n_layers=6, n_head=8,
             d_word_vec=512, d_model=512, d_inner_hid=1024, dropout=0.1,
-            pretrained_word_vectors=None, trainable_embeddings=True,
-            regression_activation=None):
-        super(TransformerRegressor, self).__init__()
+            pretrained_word_vectors=None, trainable_embeddings=True):
+        super(TransformerClassifier, self).__init__()
         self.d_model = d_model
         self.encoder = Encoder(
             n_src_vocab, n_max_seq, n_layers=n_layers, n_head=n_head,
@@ -24,8 +23,8 @@ class TransformerRegressor(nn.Module):
                 trainable_embeddings=trainable_embeddings)
         self.dropout = nn.Dropout(dropout)
         self.fcl = Linear(d_model, d_model, activation="relu")
-        self.regressor = Regressor(input_size=d_model,
-                                     activation=regression_activation)
+        self.classifier = Linear(d_model, n_classes, bias=True,
+                                  activation=None)
 
 
         assert d_model == d_word_vec, \
@@ -49,6 +48,6 @@ class TransformerRegressor(nn.Module):
         data = {"inputs": reduced_sum}
         fcl_out = self.fcl(data)["out"]
         data["inputs"] = fcl_out
-        regression_output = self.regressor(data)["out"]
-        output = {"out": regression_output, "attention": attn}
+        classifier_output = self.classifier(data)["out"]
+        output = {"out": classifier_output, "attention": attn}
         return output

@@ -19,10 +19,11 @@ from bhabana.processing import Id2Seq
 from tensorboardX import SummaryWriter
 from sacred.observers import SlackObserver
 from sacred.observers import MongoObserver
-from bhabana.metrics import PearsonCorrelation
+from bhabana.metrics import Accuracy
+from bhabana.metrics import FMeasure
+from bhabana.metrics import ClassificationReport
 from torch.optim.lr_scheduler import MultiStepLR
-from bhabana.pipeline import EmbeddingNgramCNNRNNRegression
-
+from bhabana.pipeline import TransformerClassifier
 
 
 slack_config_file_path = os.path.join(os.path.dirname(__file__), "slack.json")
@@ -44,7 +45,7 @@ ex.observers.append(mongo_obs)
 @ex.config
 def my_config():
 
-    experiment_name = "SA_EMBED_NGRAM_CNN_RNN"
+    experiment_name = "SA_TRANSFORMER_CLASSIFIER"
     experiment_description = "default experiment"
     dataset = {
         "name": "IMDB",
@@ -57,7 +58,7 @@ def my_config():
         "max_seq_length": 100
     }
     setup = {
-        "name": "brahmaputra",
+        "name": "kanyakumari",
         "epochs": 20,
         "batch_size": 64,
         "experiment_name": "{}".format(experiment_name),
@@ -70,33 +71,20 @@ def my_config():
         "data_parallel": False
     }
     pipeline = {
-        "embedding_layer": {
+        "transformer": {
             "embedding_dims": 300,
-            "embedding_dropout": 0.5,
+            "dropout": 0.1,
             "preload_word_vectors": True,
-            "train_embeddings": False
-        },
-        "ngram_cnn": {
-            "cnn_kernel_dims": 100,
-            "cnn_kernel_sizes": [1, 3, 5, 7],
-            "cnn_layers": 1,
-            "cnn_dropout": 0.5
-        },
-        "rnn": {
-            "rnn_hidden_size": 50,
-            "rnn_layers": 1,
-            "bidirectional": True,
-            "rnn_dropout": 0.5,
-            "cell_type": "lstm"
-        },
-        "regression": {
-            "activation": "relu"
+            "trainable_embeddings": False,
+            "d_inner_hid": 1024,
+            "n_layers": 6,
+            "n_head": 8
         }
     }
     optimizer = {
         "learning_rate": 0.001,
         "weight_decay": 0.00001,
-        "lr_scheduling_milestones": [1, 3, 5, 7, 9, 13, 17]
+        "lr_scheduling_milestones": [3, 7, 17]
     }
     experiment_config = experiment_boilerplate(setup)
 
@@ -135,17 +123,21 @@ def experiment_boilerplate(setup_config):
     return experiment_config
 
 
-class BrahmaputraTrainer(Trainer):
+class KanyakumariTrainer(Trainer):
 
     def __init__(self, experiment_name, pipeline, dataset, experiment_config,
                  logger, run, n_epochs=10, batch_size=64, max_seq_length=0,
                  n_workers=4, early_stopping_delta=0, patience=5,
                  save_every=100, evaluate_every=100, learning_rate=0.001,
-                 weight_decay=0.0, train_on_gpu=True):
+                 weight_decay=0.0, train_on_gpu=True, data_parallel=False,
+                 lr_scheduling_milestones=[1, 3, 5, 7]):
         self.experiment_name = experiment_name
         self.logger = logger
         self.sacred_run = run
         self.pipeline = pipeline
+        self.data_parallel = data_parallel
+        self.pipeline = torch.nn.DataParallel(self.pipeline) if \
+                                        self.data_parallel else self.pipeline
         self.dataset = dataset
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
@@ -160,12 +152,13 @@ class BrahmaputraTrainer(Trainer):
         self.save_every = save_every
         self.evaluate_every = evaluate_every
         self.train_on_gpu = train_on_gpu and torch.cuda.is_available()
+        self.lr_scheduling_milestones = lr_scheduling_milestones
         self._set_optimizer()
         if self.train_on_gpu:
             self.logger.info("CUDA found. Training model on GPU")
             self.pipeline.cuda()
-        self.loss = nn.MSELoss()
-        self.metric = PearsonCorrelation()
+        self.loss = nn.CrossEntropyLoss()
+        self.metrics = [Accuracy(), FMeasure(), ClassificationReport()]
         self.best_model_path = os.path.join(self.experiment_config["checkpoints_dir"],
                                             "best_model.pth.tar")
         self._set_trackers()
@@ -213,7 +206,7 @@ class BrahmaputraTrainer(Trainer):
                                lr=self.learning_rate,
                                weight_decay=self.weight_decay)
         self.scheduler = MultiStepLR(self.optimizer,
-                                     milestones=[60, 100, 150, 400],
+                                     milestones=self.lr_scheduling_milestones,
                                      gamma=0.1)
 
     def __call__(self, *args, **kwargs):
@@ -255,19 +248,13 @@ class BrahmaputraTrainer(Trainer):
         self.pipeline.train()
         self.restart_dataloader("train")
 
-    def get_rnn_hidden(self):
-        hidden = self.pipeline.init_rnn_hidden(self.batch_size,
-                                               self.train_on_gpu)
-        return hidden
 
     def train(self, batch):
         self.pipeline.zero_grad()
         batch["inputs"] = batch["text"]
         batch["training"] = True
-        batch["hidden"] = self.get_rnn_hidden()
         output = self.pipeline(batch)
-        loss = self.loss(output["out"],
-                         torch.unsqueeze(batch["sentiment"], dim=1))
+        loss = self.loss(output["out"], torch.max(batch["label"], 1)[1])
         scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
         loss.backward()
         self.optimizer.step()
@@ -278,35 +265,38 @@ class BrahmaputraTrainer(Trainer):
                              "Training Loss: {}".format(self.current_epoch,
                                                 self.global_step,
                                                 scalar_loss))
-            self.log_histogram()
+            # self.log_histogram()
             pred = output["out"].data.cpu().numpy() if self.train_on_gpu else \
                                                     output["out"].data.numpy()
-            gt = batch["sentiment"].data.cpu().numpy() if self.train_on_gpu \
+            gt = batch["label"].data.cpu().numpy() if self.train_on_gpu \
                 else batch["sentiment"].data.numpy()
-            pc, p_val = self.metric(np.squeeze(pred, axis=1), gt)
-            self.log("training.pearson_correlation", pc)
-            self.log("training.pearson_correlation_p_val", p_val)
+            acc, f_score, clf_rpt = self._run_metrics(pred, gt)
+            self.log("training.Accuracy", acc)
+            self.log("training.F1_Score", f_score)
 
     def run_evaluation_epoch(self, dataloader, mode="validation",
                              write_results=False):
-        val_losses = []
-        val_pcs = []
+        val_losses, val_accs, val_fscores = [], [], []
         for i_val, val_batch in dataloader:
-            pred, gt, val_loss, val_pc, val_p_val = self.evaluate(val_batch)
+            pred, gt, val_loss, acc, f_score, clf_rpt = self.evaluate(val_batch)
             val_losses.append(val_loss)
-            val_pcs.append(val_pc)
+            val_accs.append(acc)
+            val_fscores.append(f_score)
             if write_results:
                 self.write_results_to_file(i_val, val_batch["text"], pred,
                                            gt, mode)
             if i_val % 10 == 0:
                 self.logger.info("Epoch: {}\tGlobal Step: {}\t"
-                                 "Mode: {}\tLoss: {}\tPC: {}\tBatch "
-                                 "Number: {}".format(
+                                 "Mode: {}\tLoss: {}\tAcc: {}\t"
+                                 "F1-Score: {}\tBatch Number: {}".format(
                         self.current_epoch, self.global_step, mode,
-                        val_loss, val_pc, i_val))
-        avg_loss, avg_pc = np.average(val_losses), np.average(val_pcs)
-        self.log("{}.average_loss".format(mode), avg_loss)
-        self.log("{}.average_pearson_correlation".format(mode), avg_pc)
+                        val_loss, acc, f_score, i_val))
+        avg_loss, avg_acc, avg_f1score = np.average(val_losses),\
+                                         np.average(val_accs), \
+                                         np.average(val_fscores)
+        self.log("{}.Average_Loss".format(mode), avg_loss)
+        self.log("{}.Accuracy".format(mode), avg_acc)
+        self.log("{}.F1_Score".format(mode), avg_f1score)
         if mode == "validation":
             self.update_loss_history(avg_loss)
         self.restart_dataloader(mode)
@@ -320,18 +310,22 @@ class BrahmaputraTrainer(Trainer):
     def evaluate(self, batch):
         batch["inputs"] = batch["text"]
         batch["training"] = False
-        batch["hidden"] = self.get_rnn_hidden()
         output = self.pipeline(batch)
-        loss = self.loss(output["out"],
-                         torch.unsqueeze(batch["sentiment"], dim=1))
+        loss = self.loss(output["out"], torch.max(batch["label"], dim=1)[1])
         pred = output["out"].data.cpu().numpy() if self.train_on_gpu else \
                                                 output["out"].data.numpy()
-        gt = batch["sentiment"].data.cpu().numpy() if self.train_on_gpu else \
+        gt = batch["label"].data.cpu().numpy() if self.train_on_gpu else \
                                             batch["sentiment"].data.numpy()
-        pc, p_val = self.metric(np.squeeze(pred, axis=1), gt)
+        acc, f_score, clf_rpt = self._run_metrics(pred, gt)
 
         scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
-        return pred, gt, scalar_loss, pc, p_val
+        return pred, gt, scalar_loss, acc, f_score, clf_rpt
+
+    def _run_metrics(self, pred, gt):
+        results = []
+        for metric in self.metrics:
+            results.append(metric(pred, gt))
+        return results[0], results[1], results[2]
 
     def load(self):
         self.logger.info("Trying to load checkpoint from '{}'".format(
@@ -474,22 +468,18 @@ def get_dataset_class(dataset_config):
     return ds
 
 
-def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors):
-    pipeline = EmbeddingNgramCNNRNNRegression(vocab_size=vocab_size,
-          embedding_dims=pipeline_config["embedding_layer"]["embedding_dims"],
-          rnn_hidden_size=pipeline_config["rnn"]["rnn_hidden_size"],
-          bidirectional=pipeline_config["rnn"]["bidirectional"],
-          rnn_cell=pipeline_config["rnn"]["cell_type"],
-          rnn_layers=pipeline_config["rnn"]["rnn_layers"],
-          cnn_layers=pipeline_config["ngram_cnn"]["cnn_layers"],
-          cnn_kernel_dim=pipeline_config["ngram_cnn"]["cnn_kernel_dims"],
-          cnn_kernel_sizes=pipeline_config["ngram_cnn"]["cnn_kernel_sizes"],
-          padding_idx=0, pretrained_word_vectors=pretrained_word_vectors,
-          trainable_embeddings=pipeline_config["embedding_layer"]["train_embeddings"],
-          embedding_dropout=pipeline_config["embedding_layer"]["embedding_dropout"],
-          regression_activation=pipeline_config["regression"]["activation"],
-          cnn_dropout=pipeline_config["ngram_cnn"]["cnn_dropout"],
-          rnn_dropout=pipeline_config["rnn"]["rnn_dropout"])
+def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
+                 n_classes, max_seq_len):
+    pipeline = TransformerClassifier(n_src_vocab=vocab_size, n_max_seq=max_seq_len,
+                                     n_classes=n_classes,
+                                     n_layers=pipeline_config["transformer"]["n_layers"],
+                                    n_head=pipeline_config["transformer"]["n_head"],
+                                    d_word_vec=pipeline_config["transformer"]["embedding_dims"],
+                                    d_model=pipeline_config["transformer"]["embedding_dims"],
+                                    d_inner_hid=pipeline_config["transformer"]["d_inner_hid"],
+                                    dropout=pipeline_config["transformer"]["dropout"],
+                                    pretrained_word_vectors=pretrained_word_vectors,
+                                    trainable_embeddings=pipeline_config["transformer"]["trainable_embeddings"])
     return pipeline
 
 @ex.automain
@@ -497,8 +487,10 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                  optimizer, experiment_config, _log, _run):
     ds = get_dataset_class(dataset_config=dataset)
     pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
-                            pretrained_word_vectors=ds.w2v)
-    trainer = BrahmaputraTrainer(experiment_name=experiment_name,
+                            pretrained_word_vectors=ds.w2v,
+                            n_classes=ds.n_classes,
+                            max_seq_len=dataset["max_seq_length"])
+    trainer = KanyakumariTrainer(experiment_name=experiment_name,
                                  pipeline=pipeline, dataset=ds,
                                  experiment_config=experiment_config,
                                  logger=_log,
@@ -514,5 +506,7 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                                  evaluate_every=setup["evaluate_every"],
                                  learning_rate=optimizer["learning_rate"],
                                  weight_decay=optimizer["weight_decay"],
-                                 train_on_gpu=setup["train_on_gpu"])
+                                 train_on_gpu=setup["train_on_gpu"],
+                                 data_parallel=setup["data_parallel"],
+                                 lr_scheduling_milestones=optimizer["lr_scheduling_milestones"])
     trainer.run()

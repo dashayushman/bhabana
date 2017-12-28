@@ -72,12 +72,19 @@ def my_config():
     pipeline = {
         "transformer": {
             "embedding_dims": 300,
-            "dropout": 0.1,
+            "dropout": 0.5,
             "preload_word_vectors": True,
             "trainable_embeddings": False,
             "d_inner_hid": 1024,
-            "n_layers": 6,
+            "n_layers": 3,
             "n_head": 8
+        },
+        "rnn": {
+            "rnn_hidden_size": 50,
+            "rnn_layers": 1,
+            "bidirectional": True,
+            "rnn_dropout": 0.5,
+            "cell_type": "lstm"
         },
         "regression": {
             "activation": "relu"
@@ -202,8 +209,9 @@ class GangaTrainer(Trainer):
 
     def _set_optimizer(self):
         self.logger.info("Initializing the Optimizer")
+        trainable_parameters = self.pipeline.get_trainable_parameters()
         trainable_parameters = filter(lambda p: p.requires_grad,
-                                      self.pipeline.parameters())
+                                      trainable_parameters)
         self.optimizer = optim.Adam(trainable_parameters,
                                lr=self.learning_rate,
                                weight_decay=self.weight_decay)
@@ -250,10 +258,16 @@ class GangaTrainer(Trainer):
         self.pipeline.train()
         self.restart_dataloader("train")
 
+    def get_rnn_hidden(self):
+        hidden = self.pipeline.init_rnn_hidden(self.batch_size,
+                                               self.train_on_gpu)
+        return hidden
+
     def train(self, batch):
         self.pipeline.zero_grad()
         batch["inputs"] = batch["text"]
         batch["training"] = True
+        batch["hidden"] = self.get_rnn_hidden()
         output = self.pipeline(batch)
         loss = self.loss(output["out"],
                          torch.unsqueeze(batch["sentiment"], dim=1))
@@ -309,6 +323,7 @@ class GangaTrainer(Trainer):
     def evaluate(self, batch):
         batch["inputs"] = batch["text"]
         batch["training"] = False
+        batch["hidden"] = self.get_rnn_hidden()
         output = self.pipeline(batch)
         loss = self.loss(output["out"],
                          torch.unsqueeze(batch["sentiment"], dim=1))
@@ -475,7 +490,16 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
                                     trainable_embeddings=pipeline_config[
                                         "transformer"]["trainable_embeddings"],
                                     regression_activation=pipeline_config[
-                                        "regression"]["activation"])
+                                        "regression"]["activation"],
+                                    rnn_hidden_size=pipeline_config["rnn"][
+                                        "rnn_hidden_size"],
+                                    bidirectional=pipeline_config["rnn"][
+                                        "bidirectional"],
+                                    rnn_layers=pipeline_config["rnn"][
+                                        "rnn_layers"],
+                                    rnn_dropout=pipeline_config["rnn"][
+                                        "rnn_dropout"],
+                                    rnn_cell=pipeline_config["rnn"]["cell_type"])
     return pipeline
 
 @ex.automain

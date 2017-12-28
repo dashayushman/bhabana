@@ -486,14 +486,14 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "name": "imdb",
                 "n_workers": 5,
                 "load_spacy_vectors": True,
-                "max_seq_length": 400,
+                "max_seq_length": 150,
                 "cuda": True
             },
             "setup": {
                 "epochs": 30,
                 "batch_size": 32,
-                "evaluate_every": 450,
-                "save_every": 450,
+                "evaluate_every": 500,
+                "save_every": 500,
                 "early_stopping_delta": 0.0,
                 "patience": 10,
                 "train_on_gpu": True,
@@ -502,19 +502,26 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "transformer": {
                     "embedding_dims": 300,
-                    "dropout": 0.1,
+                    "dropout": 0.5,
                     "preload_word_vectors": True,
                     "trainable_embeddings": False,
-                    "d_inner_hid": 1024,
-                    "n_layers": 6,
-                    "n_head": 8
+                    "d_inner_hid": 256,
+                    "n_layers": 3,
+                    "n_head": 4
+                },
+                "rnn": {
+                    "rnn_hidden_size": 256,
+                    "rnn_layers": 1,
+                    "bidirectional": True,
+                    "rnn_dropout": 0.5,
+                    "cell_type": "gru"
                 },
                 "regression": {
                     "activation": "relu"
                 }
             },
             "optimizer" : {
-                "learning_rate": 0.001,
+                "learning_rate": 0.0001,
                 "weight_decay": 0.00001,
                 "lr_scheduling_milestones": [2, 7, 15, 19]
             }
@@ -528,7 +535,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "name": "imdb",
                 "n_workers": 5,
                 "load_spacy_vectors": True,
-                "max_seq_length": 400,
+                "max_seq_length": 150,
                 "cuda": True
             },
             "setup": {

@@ -39,7 +39,7 @@ with open(mongo_config_file_path, "r") as jf:
 slack_obs = SlackObserver.from_config(slack_config_file_path)
 ex = Experiment('sentiment_analysis')
 ex.observers.append(slack_obs)
-ex.observers.append(mongo_obs)
+#ex.observers.append(mongo_obs)
 
 @ex.config
 def my_config():
@@ -135,21 +135,24 @@ def experiment_boilerplate(setup_config):
 class GangaTrainer(Trainer):
 
     def __init__(self, experiment_name, pipeline, dataset, experiment_config,
-                 logger, run, n_epochs=10, batch_size=64, max_seq_length=0,
-                 n_workers=4, early_stopping_delta=0, patience=5,
-                 save_every=100, evaluate_every=100, learning_rate=0.001,
-                 weight_decay=0.0, train_on_gpu=True, data_parallel=False,
-                 lr_scheduling_milestones=[1, 3, 5, 7]):
+                 logger, run, pipeline_config, n_epochs=10, batch_size=64,
+                 max_seq_length=0, n_workers=4, early_stopping_delta=0,
+                 patience=5, save_every=100, evaluate_every=100,
+                 learning_rate=0.001, weight_decay=0.0, train_on_gpu=True,
+                 data_parallel=False, lr_scheduling_milestones=[1, 3, 5, 7]):
         self.experiment_name = experiment_name
+        self.pipeline_config = pipeline_config
         self.logger = logger
         self.sacred_run = run
         self.pipeline = pipeline
         self.data_parallel = data_parallel
+        self.learning_rate = learning_rate
+        self.lr_scheduling_milestones = lr_scheduling_milestones
+        self.weight_decay = weight_decay
+        self._set_optimizer()
         self.pipeline = torch.nn.DataParallel(self.pipeline) if \
             self.data_parallel else self.pipeline
         self.dataset = dataset
-        self.learning_rate = learning_rate
-        self.weight_decay = weight_decay
         self.experiment_config = experiment_config
         self.writer = SummaryWriter(log_dir=experiment_config["logs_dir"])
         self.n_epochs = n_epochs
@@ -160,9 +163,7 @@ class GangaTrainer(Trainer):
         self.patience = patience
         self.save_every = save_every
         self.evaluate_every = evaluate_every
-        self.lr_scheduling_milestones = lr_scheduling_milestones
         self.train_on_gpu = train_on_gpu and torch.cuda.is_available()
-        self._set_optimizer()
         if self.train_on_gpu:
             self.logger.info("CUDA found. Training model on GPU")
             self.pipeline.cuda()
@@ -258,9 +259,28 @@ class GangaTrainer(Trainer):
         self.pipeline.train()
         self.restart_dataloader("train")
 
+    def init_hidden(self, batch_size):
+        n_layers = self.pipeline_config["rnn"]["rnn_layers"]
+        bidirectional = self.pipeline_config["rnn"]["bidirectional"]
+        hidden_size = self.pipeline_config["rnn"]["rnn_hidden_size"]
+        rnn_type = self.pipeline_config["rnn"]["cell_type"].lower()
+        hidden_size = hidden_size if not bidirectional else hidden_size // 2
+        d1 = n_layers if not bidirectional else n_layers * 2
+        if self.data_parallel:
+            d1 = d1 * 2
+            batch_size = batch_size // 2
+
+        if self.train_on_gpu:
+            h = Variable(torch.zeros(d1, batch_size, hidden_size)).cuda()
+            c = Variable(torch.zeros(d1, batch_size, hidden_size)).cuda()
+        else:
+            h = Variable(torch.zeros(d1, batch_size, hidden_size))
+            c = Variable(torch.zeros(d1, batch_size, hidden_size))
+        ret = h if rnn_type == "gru" or rnn_type == "rnn" else  (h, c)
+        return ret
+
     def get_rnn_hidden(self):
-        hidden = self.pipeline.init_rnn_hidden(self.batch_size,
-                                               self.train_on_gpu)
+        hidden = self.init_hidden(self.batch_size)
         return hidden
 
     def train(self, batch):
@@ -506,6 +526,7 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
 def run_pipeline(experiment_name, dataset, setup, pipeline,
                  optimizer, experiment_config, _log, _run):
     ds = get_dataset_class(dataset_config=dataset)
+    pipeline_config = pipeline
     pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
                             pretrained_word_vectors=ds.w2v,
                             max_seq_len=dataset["max_seq_length"])
@@ -527,5 +548,7 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                                  weight_decay=optimizer["weight_decay"],
                                  train_on_gpu=setup["train_on_gpu"],
                                  data_parallel=setup["data_parallel"],
-                                 lr_scheduling_milestones=optimizer["lr_scheduling_milestones"])
+                                 lr_scheduling_milestones=optimizer[
+                                     "lr_scheduling_milestones"],
+                                 pipeline_config=pipeline_config)
     trainer.run()

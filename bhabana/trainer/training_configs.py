@@ -615,7 +615,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "name": "imdb",
                 "n_workers": 5,
                 "load_spacy_vectors": True,
-                "max_seq_length": 400,
+                "max_seq_length": 300,
                 "cuda": True
             },
             "setup": {
@@ -631,12 +631,12 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "transformer": {
                     "embedding_dims": 300,
-                    "dropout": 0.1,
+                    "dropout": 0.3,
                     "preload_word_vectors": True,
                     "trainable_embeddings": False,
-                    "d_inner_hid": 1024,
-                    "n_layers": 6,
-                    "n_head": 8
+                    "d_inner_hid": 512,
+                    "n_layers": 3,
+                    "n_head": 4
                 }
             },
             "optimizer": {
@@ -654,7 +654,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "name": "imdb",
                 "n_workers": 5,
                 "load_spacy_vectors": True,
-                "max_seq_length": 400,
+                "max_seq_length": 300,
                 "cuda": True
             },
             "setup": {
@@ -670,12 +670,12 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "transformer": {
                     "embedding_dims": 300,
-                    "dropout": 0.1,
+                    "dropout": 0.3,
                     "preload_word_vectors": True,
                     "trainable_embeddings": True,
-                    "d_inner_hid": 1024,
-                    "n_layers": 6,
-                    "n_head": 8
+                    "d_inner_hid": 512,
+                    "n_layers": 3,
+                    "n_head": 4
                 },
                 "regression": {
                     "activation": "relu"

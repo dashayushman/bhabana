@@ -282,7 +282,7 @@ class KanyakumariTrainer(Trainer):
             pred = output["out"].data.cpu().numpy() if self.train_on_gpu else \
                                                     output["out"].data.numpy()
             gt = batch["label"].data.cpu().numpy() if self.train_on_gpu \
-                else batch["sentiment"].data.numpy()
+                else batch["label"].data.numpy()
             acc, f_score, clf_rpt = self._run_metrics(pred, gt)
             self.log("training.Accuracy", acc)
             self.log("training.F1_Score", f_score)

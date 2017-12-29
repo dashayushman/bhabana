@@ -704,14 +704,14 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "name": "amazon_reviews_imbalanced_de",
                 "n_workers": 5,
                 "load_spacy_vectors": True,
-                "max_seq_length": 130,
+                "max_seq_length": 150,
                 "cuda": True
             },
             "setup": {
                 "epochs": 30,
                 "batch_size": 32,
-                "evaluate_every": 700,
-                "save_every": 700,
+                "evaluate_every": 1500,
+                "save_every": 1500,
                 "early_stopping_delta": 0.0,
                 "patience": 10,
                 "train_on_gpu": True,
@@ -720,21 +720,21 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "embedding_layer": {
                     "embedding_dims": 300,
-                    "embedding_dropout": 0.1,
+                    "embedding_dropout": 0.3,
                     "preload_word_vectors": True,
-                    "train_embeddings": False
+                    "train_embeddings": True
                 },
                 "ngram_cnn": {
                     "cnn_kernel_dims": 500,
                     "cnn_kernel_sizes": [3, 5, 9, 13],
                     "cnn_layers": 1,
-                    "cnn_dropout": 0.2
+                    "cnn_dropout": 0.4
                 },
                 "rnn": {
                     "rnn_hidden_size": 600,
                     "rnn_layers": 2,
                     "bidirectional": True,
-                    "rnn_dropout": 0.3,
+                    "rnn_dropout": 0.5,
                     "cell_type": "gru"
                 }
             },

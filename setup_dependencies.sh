@@ -44,6 +44,10 @@ wget http://52.29.250.192:3000/datasets/imdb.tar.gz
 tar -xvzf imdb.tar.gz
 rm imdb.tar.gz
 
+wget http://54.93.45.251:3000/datasets/amazon_reviews_imbalanced_de.tar.gz
+tar -xvzf amazon_reviews_imbalanced_de.tar.gz
+rm amazon_reviews_imbalanced_de.tar.gz
+
 # cd ~/
 
 

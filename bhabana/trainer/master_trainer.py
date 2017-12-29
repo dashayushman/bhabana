@@ -41,9 +41,9 @@ def get_experiment_by_name(name):
 
 
 if args.name in THE_BOOK_OF_EXPERIMENTS:
+    end_at = args.end_at if args.end_at != 0 else \
+        len(THE_BOOK_OF_EXPERIMENTS[args.name])
     for i_c, config in enumerate(THE_BOOK_OF_EXPERIMENTS[args.name]):
-        end_at = args.end_at if args.end_at != 0 else \
-                                        len(THE_BOOK_OF_EXPERIMENTS[args.name])
         if i_c >= args.start_from-1 and i_c <= end_at:
             config["experiment_name"] = config["experiment_name"] + " _" + \
                                         args.name + "_" + str(i_c)

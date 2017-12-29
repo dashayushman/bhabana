@@ -154,10 +154,10 @@ class QuestionModule(nn.Module):
 
 
 class InputModule(nn.Module):
-    def __init__(self,hidden_size):
+    def __init__(self,input_size, hidden_size):
         super(InputModule, self).__init__()
         self.hidden_size = hidden_size
-        self.gru = nn.GRU(hidden_size, hidden_size, bidirectional=True, batch_first=True)
+        self.gru = nn.GRU(input_size, hidden_size, bidirectional=True, batch_first=True)
         for name, param in self.gru.state_dict().items():
             if 'weight' in name: init.xavier_normal(param)
         self.dropout = nn.Dropout(0.1)
@@ -216,7 +216,7 @@ class DMNPlus(nn.Module):
         init.uniform(self.word_embedding.state_dict()['weight'], a=-(3**0.5), b=3**0.5)
         #self.criterion = nn.CrossEntropyLoss(size_average=False)
 
-        self.input_module = InputModule(hidden_size)
+        self.input_module = InputModule(w2v_dims, hidden_size)
         self.questions = nn.Parameter(torch.randn(1, 1, memory_dims),
                                             requires_grad=True)
         self.memory = EpisodicMemory(hidden_size)

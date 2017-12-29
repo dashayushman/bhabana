@@ -15,3 +15,4 @@ from bhabana.models.multi_head_attention import MultiHeadAttention
 from bhabana.models.pointwise_feed_forward import PositionwiseFeedForward
 from bhabana.models.transformer_encoder_layer import EncoderLayer
 from bhabana.models.transformer_encoder import Encoder
+from bhabana.models.dynamic_memory import DMNPlus

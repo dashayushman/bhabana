@@ -861,15 +861,17 @@ def load_vocabulary(vocab_path):
         dup_id = 0
         for line in vf:
             term = line.strip().split('\t')[0]
+            if term == " " or len(term) == 0:
+                continue
             if term not in w2i:
                 w2i[term] = wid
                 i2w[wid] = term
                 wid += 1
-            else:
-                w2i["{}{}".format(term, dup_id)] = wid
-                i2w[wid] = "{}{}".format(term, dup_id)
-                wid += 1
-                dup_id += 1
+            #else:
+            #    w2i["{}{}".format(term, dup_id)] = wid
+            #    i2w[wid] = "{}{}".format(term, dup_id)
+            #    wid += 1
+            #    dup_id += 1
 
     return w2i, i2w
 

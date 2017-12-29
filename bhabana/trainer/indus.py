@@ -162,7 +162,8 @@ class IndusTrainer(Trainer):
         self.best_model_path = os.path.join(self.experiment_config["checkpoints_dir"],
                                             "best_model.pth.tar")
         self._set_trackers()
-        self._set_dataloaders()
+        self.dataloader = {}
+        #self._set_dataloaders()
         self.sequence_decoder = Id2Seq(i2w=self.dataset.vocab["word"][1],
                                        mode="word", batch=True)
 
@@ -218,6 +219,7 @@ class IndusTrainer(Trainer):
             self.pipeline.train()
             self.logger.info("Training Epoch: {}".format(epoch))
             self.current_epoch = epoch
+            self.restart_dataloader("train")
             for i_train, train_batch in self.dataloader["train"]:
                 self.train(train_batch)
                 self.pipeline.eval()
@@ -370,10 +372,12 @@ class IndusTrainer(Trainer):
             return False
 
     def update_loss_history(self, loss):
+        if len(self.loss_history) == 5:
+            self.loss_history = self.loss_history[-4:]
         if not self.time_to_stop:
             if len(self.loss_history) > 0:
-                delta = self.loss_history[-1] - loss
-                if delta > self.early_stopping_delta:
+                delta = min(self.loss_history) - loss
+                if delta >= self.early_stopping_delta:
                     self.no_improvement_since = 0
                 else:
                     self.no_improvement_since += 1

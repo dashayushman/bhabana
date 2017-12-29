@@ -9,7 +9,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "truth to 0-1. Very little weight decay",
             "dataset": {
                 "name": "IMDB",
-                "n_workers": 10,
+                "n_workers": 5,
                 "load_spacy_vectors": True,
                 "max_seq_length": 400,
                 "cuda": True
@@ -1009,7 +1009,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.02,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1049,7 +1049,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.02,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1089,7 +1089,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.02,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1130,7 +1130,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.02,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1171,7 +1171,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.02,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1213,7 +1213,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.01,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1253,7 +1253,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.01,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1293,7 +1293,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.01,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1334,7 +1334,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.01,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False
@@ -1375,7 +1375,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "batch_size": 32,
                     "evaluate_every": 450,
                     "save_every": 450,
-                    "early_stopping_delta": 0.0,
+                    "early_stopping_delta": 0.01,
                     "patience": 10,
                     "train_on_gpu": True,
                     "save_embeddings": False

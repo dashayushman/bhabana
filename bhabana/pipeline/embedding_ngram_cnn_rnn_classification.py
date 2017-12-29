@@ -15,7 +15,7 @@ class EmbeddingNgramCNNRNNClassification(nn.Module):
                  cnn_dropout=0.5, rnn_dropout=0.5):
         super(EmbeddingNgramCNNRNNClassification, self).__init__()
         embedding_dims = embedding_dims if pretrained_word_vectors is None \
-            else pretrained_word_vectors.shape[-1]
+                                        else pretrained_word_vectors.shape[-1]
         self.rnn_hidden_size = rnn_hidden_size
         self.pipeline = nn.ModuleList([Embedding(vocab_size=vocab_size,
                                                  embedding_dims=embedding_dims,

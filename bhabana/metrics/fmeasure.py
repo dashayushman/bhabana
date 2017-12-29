@@ -10,4 +10,5 @@ class FMeasure(Metric):
         return self.calculate(pred, gt)
 
     def calculate(self, pred, gt):
-        return f1_score(np.argmax(gt, axis=1), np.argmax(pred, axis=1))
+        return f1_score(np.argmax(gt, axis=1), np.argmax(pred, axis=1),
+                        average="weighted")

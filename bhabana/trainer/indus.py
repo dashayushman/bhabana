@@ -215,34 +215,42 @@ class IndusTrainer(Trainer):
 
     def run(self):
         self.load()
+        _once_train , _once_val, _once_test = True, True, True
         for epoch in range(self.current_epoch, self.n_epochs):
             self.pipeline.train()
             self.logger.info("Training Epoch: {}".format(epoch))
             self.current_epoch = epoch
-            self.restart_dataloader("train")
+            if _once_train:
+                self.restart_dataloader("train")
+                _once_train = False
             for i_train, train_batch in self.dataloader["train"]:
                 self.train(train_batch)
                 self.pipeline.eval()
                 if self.time_to_evaluate(self.evaluate_every, i_train):
                     self.logger.info("Evaluating: mode=Validation")
+                    if _once_val:
+                        self.restart_dataloader("validation")
+                        _once_val = False
                     self.run_evaluation_epoch(self.dataloader["validation"],
                                               mode="validation")
                 if self.time_to_save(self.save_every, i_train):
                     self.save()
                 self.pipeline.train()
-            self._post_epoch_routine()
+            self._post_epoch_routine(_once_test)
+            _once_test = False
             self.scheduler.step(epoch)
             self.current_epoch += 1
             if self.time_to_stop:
                 self.closure()
                 break
 
-    def _post_epoch_routine(self):
+    def _post_epoch_routine(self, once_test):
         self.pipeline.eval()
         self.logger.info("Evaluating: mode=Validation")
         self.run_evaluation_epoch(self.dataloader["validation"],
                                   mode="validation", write_results=True)
         self.logger.info("Evaluating: mode=Test")
+        if once_test: self.restart_dataloader("test")
         self.run_evaluation_epoch(self.dataloader["test"], mode="test",
                                   write_results=True)
         self.save()

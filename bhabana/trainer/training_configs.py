@@ -730,7 +730,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
+                    "n_workers": 2,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -770,7 +770,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
+                    "n_workers": 2,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -810,7 +810,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Train embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
+                    "n_workers": 2,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -851,7 +851,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Medium Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
+                    "n_workers": 2,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -892,7 +892,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Large Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
+                    "n_workers": 2,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -934,8 +934,8 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 1,
-                    "load_spacy_vectors": False,
+                    "n_workers": 2,
+                    "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
                 },
@@ -974,7 +974,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
+                    "n_workers": 2,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -999,7 +999,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "trainable_embeddings": False
                     },
                     "regression": {
-                        "activation": "relu"
+                        "activation": None
                     }
                 },
                 "optimizer": {
@@ -1014,8 +1014,8 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Train embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
-                    "load_spacy_vectors": False,
+                    "n_workers": 2,
+                    "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
                 },
@@ -1039,7 +1039,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "trainable_embeddings": True
                     },
                     "regression": {
-                        "activation": "relu"
+                        "activation": None
                     }
                 },
                 "optimizer": {
@@ -1051,12 +1051,12 @@ THE_BOOK_OF_EXPERIMENTS = {
             {
                 "experiment_name": "SA_MEMORY_CLASSIFICATION",
                 "experiment_description": "Train Memory Network. 3 hops. "
-                                          "Train embeddings. Spacy Vectors. "
+                                          "Freeze embeddings. Spacy Vectors. "
                                           "Medium Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
-                    "load_spacy_vectors": False,
+                    "n_workers": 2,
+                    "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
                 },
@@ -1077,10 +1077,10 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "num_hop": 3,
                         "dropout": 0.1,
                         "preload_word_vectors": True,
-                        "trainable_embeddings": True
+                        "trainable_embeddings": False
                     },
                     "regression": {
-                        "activation": "relu"
+                        "activation": None
                     }
                 },
                 "optimizer": {
@@ -1092,12 +1092,12 @@ THE_BOOK_OF_EXPERIMENTS = {
             {
                 "experiment_name": "SA_MEMORY_CLASSIFICATION",
                 "experiment_description": "Train Memory Network. 3 hops. "
-                                          "Train embeddings. Spacy Vectors. "
+                                          "Freeze embeddings. Spacy Vectors. "
                                           "Large Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 7,
-                    "load_spacy_vectors": False,
+                    "n_workers": 2,
+                    "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
                 },
@@ -1118,10 +1118,10 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "num_hop": 3,
                         "dropout": 0.1,
                         "preload_word_vectors": True,
-                        "trainable_embeddings": True
+                        "trainable_embeddings": False
                     },
                     "regression": {
-                        "activation": "relu"
+                        "activation": None
                     }
                 },
                 "optimizer": {

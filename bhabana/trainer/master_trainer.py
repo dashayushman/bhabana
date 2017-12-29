@@ -15,6 +15,8 @@ parser.add_argument('--name', type=str,
                          'brahmaputra, ganga, etc.')
 parser.add_argument('--start_from', type=int, default=1,
                     help='Start')
+parser.add_argument('--end_at', type=int, default=0,
+                    help='End')
 parser.add_argument('--data_parallel', type=bool,
                     help='data parallel')
 
@@ -40,7 +42,9 @@ def get_experiment_by_name(name):
 
 if args.name in THE_BOOK_OF_EXPERIMENTS:
     for i_c, config in enumerate(THE_BOOK_OF_EXPERIMENTS[args.name]):
-        if i_c >= args.start_from-1:
+        end_at = args.end_at if args.end_at != 0 else \
+                                        len(THE_BOOK_OF_EXPERIMENTS[args.name])
+        if i_c >= args.start_from-1 and i_c <= end_at:
             config["experiment_name"] = config["experiment_name"] + " _" + \
                                         args.name + "_" + str(i_c)
             if args.data_parallel:

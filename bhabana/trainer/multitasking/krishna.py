@@ -61,7 +61,7 @@ def my_config():
         "max_seq_length": 100
     }
     setup = {
-        "name": "brahmaputra",
+        "name": "krishna",
         "epochs": 20,
         "batch_size": 64,
         "experiment_name": "{}".format(experiment_name),

@@ -444,7 +444,63 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "weight_decay": 0.00001,
                 "lr_scheduling_milestones": [2, 7, 15, 19]
             }
+        },
+        {
+            "experiment_name": "SA_EMBED_NGRAM_CNN_RNN",
+            "experiment_description": "Train with preloaded spacy vectors. "
+                                      "Here we see the impact of rescaling "
+                                      "the ground truth to 0-1 and adding a "
+                                      "relu activation function at the "
+                                      "last layer (regression layer). No "
+                                      "weight decay",
+            "dataset": {
+                "name": "stanford_sentiment_treebank",
+                "n_workers": 3,
+                "use_spacy_vocab": True,
+                "load_spacy_vectors": True,
+                "max_seq_length": 0,
+                "cuda": True
+            },
+            "setup": {
+                "epochs": 30,
+                "batch_size": 32,
+                "evaluate_every": 100,
+                "save_every": 100,
+                "early_stopping_delta": 0.1,
+                "patience": 12,
+                "train_on_gpu": True,
+                "save_embeddings": False
+            },
+            "pipeline": {
+                "embedding_layer": {
+                    "embedding_dims": 300,
+                    "embedding_dropout": 0.5,
+                    "preload_word_vectors": True,
+                    "train_embeddings": False
+                },
+                "ngram_cnn": {
+                    "cnn_kernel_dims": 500,
+                    "cnn_kernel_sizes": [3, 5, 9, 13],
+                    "cnn_layers": 1,
+                    "cnn_dropout": 0.5
+                },
+                "rnn": {
+                    "rnn_hidden_size": 600,
+                    "rnn_layers": 2,
+                    "bidirectional": True,
+                    "rnn_dropout": 0.5,
+                    "cell_type": "gru"
+                },
+                "regression": {
+                    "activation": "relu"
+                }
+            },
+            "optimizer" : {
+                "learning_rate": 0.001,
+                "weight_decay": 0.001,
+                "lr_scheduling_milestones": [2, 7, 15, 19]
             }
+        }
         ]
     },
     "yamuna": {
@@ -707,7 +763,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       " embedding layer. Amazon De",
             "dataset": {
                 "name": "stanford_sentiment_treebank",
-                "n_workers": 3,
+                "n_workers": 5,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 0,

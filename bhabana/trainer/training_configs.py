@@ -1452,8 +1452,8 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "very small network. No rescale relu",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 1,
-                    "load_spacy_vectors": False,
+                    "n_workers": 3,
+                    "load_spacy_vectors": True,
                     "max_seq_length": 20,
                     "rescale": (0, 1),
                     "cuda": True
@@ -1461,8 +1461,8 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "setup": {
                     "epochs": 30,
                     "batch_size": 32,
-                    "evaluate_every": 1,
-                    "save_every": 1,
+                    "evaluate_every": 450,
+                    "save_every": 450,
                     "early_stopping_delta": 0.1,
                     "patience": 12,
                     "train_on_gpu": True,

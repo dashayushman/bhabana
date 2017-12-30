@@ -3,8 +3,6 @@ import argparse
 from bhabana.trainer import THE_BOOK_OF_EXPERIMENTS
 from bhabana.trainer.brahmaputra import ex as brahmaputra
 from bhabana.trainer.yamuna import ex as yamuna
-from bhabana.trainer.ganga import ex as ganga
-from bhabana.trainer.kanyakumari import ex as kanyakumari
 from bhabana.trainer.narmada import ex as narmada
 from bhabana.trainer.indus import ex as indus
 

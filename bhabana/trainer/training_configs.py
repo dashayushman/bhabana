@@ -399,7 +399,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "weight decay",
             "dataset": {
                 "name": "stanford_sentiment_treebank",
-                "n_workers": 10,
+                "n_workers": 5,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 0,
@@ -455,7 +455,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       "weight decay",
             "dataset": {
                 "name": "stanford_sentiment_treebank",
-                "n_workers": 32,
+                "n_workers": 5,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 0,
@@ -763,7 +763,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       " embedding layer. Amazon De",
             "dataset": {
                 "name": "stanford_sentiment_treebank",
-                "n_workers": 10,
+                "n_workers": 5,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 0,
@@ -816,7 +816,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -856,7 +856,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -896,7 +896,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Train embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -937,7 +937,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Medium Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -978,7 +978,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Large Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -1103,7 +1103,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       " embedding layer. Amazon De",
             "dataset": {
                 "name": "stanford_sentiment_treebank",
-                "n_workers": 10,
+                "n_workers": 5,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 0,
@@ -1145,7 +1145,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       " embedding layer. Amazon De",
             "dataset": {
                 "name": "stanford_sentiment_treebank",
-                "n_workers": 10,
+                "n_workers": 5,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 0,
@@ -1190,7 +1190,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -1230,7 +1230,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Frozen embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -1270,7 +1270,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Train embeddings. Spacy Vectors",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -1311,7 +1311,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Medium Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -1352,7 +1352,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "Large Sized Network",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 2,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 300,
                     "cuda": True
@@ -1477,7 +1477,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                               " embedding layer. Amazon De",
                     "dataset": {
                         "name": "stanford_sentiment_treebank",
-                        "n_workers": 10,
+                        "n_workers": 5,
                         "use_spacy_vocab": True,
                         "load_spacy_vectors": True,
                         "max_seq_length": 0,
@@ -1519,7 +1519,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                               " embedding layer. Amazon De",
                     "dataset": {
                         "name": "stanford_sentiment_treebank",
-                        "n_workers": 10,
+                        "n_workers": 5,
                         "use_spacy_vocab": True,
                         "load_spacy_vectors": True,
                         "max_seq_length": 0,
@@ -1565,7 +1565,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "very small network. No rescale relu",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 10,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 400,
                     "rescale": (0, 1),
@@ -1681,7 +1681,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                               "weight decay",
                     "dataset": {
                         "name": "stanford_sentiment_treebank",
-                        "n_workers": 32,
+                        "n_workers": 5,
                         "use_spacy_vocab": True,
                         "load_spacy_vectors": True,
                         "max_seq_length": 0,
@@ -1737,7 +1737,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                               "weight decay",
                     "dataset": {
                         "name": "stanford_sentiment_treebank",
-                        "n_workers": 32,
+                        "n_workers": 5,
                         "use_spacy_vocab": True,
                         "load_spacy_vectors": True,
                         "max_seq_length": 0,
@@ -1794,7 +1794,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "very small network. No rescale relu",
                 "dataset": {
                     "name": "imdb",
-                    "n_workers": 10,
+                    "n_workers": 5,
                     "load_spacy_vectors": True,
                     "max_seq_length": 20,
                     "rescale": (0, 1),
@@ -1885,7 +1885,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                       " embedding layer. Amazon De",
             "dataset": {
                 "name": "stanford_sentiment_treebank",
-                "n_workers": 10,
+                "n_workers": 5,
                 "use_spacy_vocab": True,
                 "load_spacy_vectors": True,
                 "max_seq_length": 0,
@@ -1928,7 +1928,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           " embedding layer. Amazon De",
                 "dataset": {
                     "name": "stanford_sentiment_treebank",
-                    "n_workers": 10,
+                    "n_workers": 5,
                     "use_spacy_vocab": True,
                     "load_spacy_vectors": True,
                     "max_seq_length": 0,

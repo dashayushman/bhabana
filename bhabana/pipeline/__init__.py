@@ -3,3 +3,5 @@ from bhabana.pipeline.embedding_ngram_cnn_rnn_classification import EmbeddingNgr
 from bhabana.pipeline.transformer_regressor import TransformerRegressor
 from bhabana.pipeline.transformer_classifier import TransformerClassifier
 from bhabana.pipeline.memory_regression import MemoryRegressor
+from bhabana.pipeline.memory_multi_task import MemoryMultiTask
+from bhabana.pipeline.embedding_ngram_cnn_rnn_multitasking import EmbeddingNgramCNNRNNMultiTask

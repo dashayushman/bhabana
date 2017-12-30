@@ -5,6 +5,8 @@ from bhabana.trainer.brahmaputra import ex as brahmaputra
 from bhabana.trainer.yamuna import ex as yamuna
 from bhabana.trainer.narmada import ex as narmada
 from bhabana.trainer.indus import ex as indus
+from bhabana.trainer.multitasking.krishna import ex as krishna
+from bhabana.trainer.multitasking.kaveri import ex as kaveri
 
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -31,6 +33,10 @@ def get_experiment_by_name(name):
         return narmada
     elif name == "indus":
         return indus
+    elif name == "krishna":
+        return krishna
+    elif name == "kaveri":
+        return kaveri
     else:
         raise NotImplementedError("This ({}) Experiment template has not been "
                                   "implemented".format(name))

@@ -1,0 +1,8 @@
+{
+    "webhook_url": "https://hooks.slack.com/services/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",
+    "icon": ":imp:",
+    "bot_name": "my-sacred-bot",
+    "completed_text": "YAY! completed ",
+    "interrupted_text": null,
+    "failed_text": "Experiment failed"
+}

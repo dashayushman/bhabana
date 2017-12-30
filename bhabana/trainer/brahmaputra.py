@@ -142,7 +142,7 @@ class BrahmaputraTrainer(Trainer):
                  logger, run, n_epochs=10, batch_size=64, max_seq_length=0,
                  n_workers=4, early_stopping_delta=0, patience=5,
                  save_every=100, evaluate_every=100, learning_rate=0.001,
-                 weight_decay=0.0, train_on_gpu=True):
+                 weight_decay=0.0, train_on_gpu=True, lr_scheduling_milestones=[1, 3, 5, 7]):
         self.experiment_name = experiment_name
         self.logger = logger
         self.sacred_run = run
@@ -161,6 +161,7 @@ class BrahmaputraTrainer(Trainer):
         self.save_every = save_every
         self.evaluate_every = evaluate_every
         self.train_on_gpu = train_on_gpu and torch.cuda.is_available()
+        self.lr_scheduling_milestones = lr_scheduling_milestones
         self._set_optimizer()
         if self.train_on_gpu:
             self.logger.info("CUDA found. Training model on GPU")
@@ -221,7 +222,7 @@ class BrahmaputraTrainer(Trainer):
                                lr=self.learning_rate,
                                weight_decay=self.weight_decay)
         self.scheduler = MultiStepLR(self.optimizer,
-                                     milestones=[60, 100, 150, 400],
+                                     milestones=self.lr_scheduling_milestones,
                                      gamma=0.1)
 
     def __call__(self, *args, **kwargs):
@@ -542,5 +543,8 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                                  evaluate_every=setup["evaluate_every"],
                                  learning_rate=optimizer["learning_rate"],
                                  weight_decay=optimizer["weight_decay"],
-                                 train_on_gpu=setup["train_on_gpu"])
+                                 train_on_gpu=setup["train_on_gpu"],
+                                 lr_scheduling_milestones=optimizer[
+                                     "lr_scheduling_milestones"]
+                                 )
     trainer.run()

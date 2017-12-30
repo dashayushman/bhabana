@@ -245,3 +245,50 @@ class DMNPlus(nn.Module):
             attention_scores.append(attention)
         preds = self.answer_module(M, questions)
         return preds, attention_scores
+
+
+class DMNPlusMultiTask(nn.Module):
+    def __init__(self, hidden_size, vocab_size, n_output_neurons,
+                 memory_dims=128, num_hop=3, pretrained_word_vectors=None,
+                 trainable=True, output_activation=None):
+        super(DMNPlusMultiTask, self).__init__()
+        self.num_hop = num_hop
+        self.memory_dims = memory_dims
+        w2v_dims = pretrained_word_vectors.shape[-1] if \
+            pretrained_word_vectors is not None else hidden_size
+        self.word_embedding = nn.Embedding(vocab_size, w2v_dims, padding_idx=0)
+        init.uniform(self.word_embedding.state_dict()['weight'], a=-(3**0.5), b=3**0.5)
+        #self.criterion = nn.CrossEntropyLoss(size_average=False)
+
+        self.input_module = InputModule(w2v_dims, hidden_size)
+        self.questions = nn.Parameter(torch.randn(1, 1, memory_dims),
+                                            requires_grad=True)
+        self.memory = EpisodicMemory(hidden_size)
+        self.answer_module = AnswerModule(n_output_neurons, hidden_size,
+                                          None)
+        self.regression_module = AnswerModule(1, hidden_size,
+                                              output_activation)
+        self.init_weights(pretrained_word_vectors, trainable)
+
+    def init_weights(self, pretrained_word_vectors, trainable=False):
+        if pretrained_word_vectors is not None:
+            self.word_embedding.weight = nn.Parameter(
+                torch.from_numpy(pretrained_word_vectors).float())
+        if not trainable:
+            self.word_embedding.weight.requires_grad = False
+
+    def forward(self, contexts, batch_size):
+        '''
+        contexts.size() -> (#batch, #sentence, #token) -> (#batch, #sentence, #hidden = #embedding)
+        questions.size() -> (#batch, #token) -> (#batch, 1, #hidden)
+        '''
+        attention_scores = []
+        facts = self.input_module(contexts, self.word_embedding, batch_size)
+        questions = self.questions.expand(batch_size, 1, self.memory_dims)
+        M = self.questions.expand(batch_size, 1, self.memory_dims)
+        for hop in range(self.num_hop):
+            M, attention = self.memory(facts, questions, M)
+            attention_scores.append(attention)
+        preds = self.answer_module(M, questions)
+        regression_preds = self.regression_module(M, questions)
+        return preds, regression_preds, attention_scores

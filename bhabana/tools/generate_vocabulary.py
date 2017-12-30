@@ -58,7 +58,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--separator",
-    dest="line_processor",
+    dest="separator",
     type=str,
     default="\t",
     help="\\t, $%%^% or anything else"

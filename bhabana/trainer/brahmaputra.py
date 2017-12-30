@@ -13,6 +13,7 @@ from torch import optim
 from sacred import Experiment
 from bhabana.datasets import IMDB
 from bhabana.datasets import AmazonReviews
+from bhabana.datasets import SentimentTreebank
 from bhabana.trainer import Trainer
 from torch.autograd import Variable
 from bhabana.processing import Id2Seq
@@ -474,6 +475,21 @@ def get_dataset_class(dataset_config):
                   rescale=dataset_config["rescale"])
     elif dataset_config["name"].lower() == "amazon_reviews_imbalanced_de":
         ds = AmazonReviews(name="amazon_reviews_imbalanced_de",
+                  lang="de", mode="regression",
+                  use_spacy_vocab=dataset_config["use_spacy_vocab"],
+                  load_spacy_vectors=dataset_config["load_spacy_vectors"],
+                  spacy_model_name=dataset_config["spacy_model_name"],
+                  aux=["word"], cuda=dataset_config["cuda"],
+                  rescale=dataset_config["rescale"])
+    elif dataset_config["name"].lower() == "stanford_sentiment_treebank":
+        ds = SentimentTreebank(mode="regression",
+                  use_spacy_vocab=dataset_config["use_spacy_vocab"],
+                  load_spacy_vectors=dataset_config["load_spacy_vectors"],
+                  spacy_model_name=dataset_config["spacy_model_name"],
+                  aux=["word"], cuda=dataset_config["cuda"],
+                  rescale=dataset_config["rescale"])
+    elif dataset_config["name"].lower() == "amazon_reviews_balanced_de":
+        ds = AmazonReviews(name="amazon_reviews_balanced_de",
                   lang="de", mode="regression",
                   use_spacy_vocab=dataset_config["use_spacy_vocab"],
                   load_spacy_vectors=dataset_config["load_spacy_vectors"],

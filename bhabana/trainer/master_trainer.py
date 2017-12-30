@@ -43,7 +43,8 @@ if args.name in THE_BOOK_OF_EXPERIMENTS:
         for i_c, config in enumerate(THE_BOOK_OF_EXPERIMENTS[args.name][args.ds]):
             if i_c >= args.start_from-1 and i_c <= end_at:
                 config["experiment_name"] = config["experiment_name"] + "_" + \
-                                            args.name + "_" + str(i_c)
+                                            args.name + "_" + args.ds + "_" + \
+                                            str(i_c)
                 if args.data_parallel:
                     config["setup"]["data_parallel"] = True
                 experiment = get_experiment_by_name(args.name)

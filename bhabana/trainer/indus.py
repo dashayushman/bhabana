@@ -255,7 +255,7 @@ class IndusTrainer(Trainer):
         self.run_evaluation_epoch(self.dataloader["test"], mode="test",
                                   write_results=True)
         self.save()
-        self.log_tf_embeddings()
+        # self.log_tf_embeddings()
         self.pipeline.train()
         self.restart_dataloader("train")
 

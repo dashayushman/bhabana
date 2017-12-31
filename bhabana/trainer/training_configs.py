@@ -474,7 +474,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "embedding_layer": {
                     "embedding_dims": 300,
-                    "embedding_dropout": 0.5,
+                    "embedding_dropout": 0.1,
                     "preload_word_vectors": True,
                     "train_embeddings": False
                 },
@@ -482,13 +482,13 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "cnn_kernel_dims": 500,
                     "cnn_kernel_sizes": [3, 5, 9, 13],
                     "cnn_layers": 1,
-                    "cnn_dropout": 0.5
+                    "cnn_dropout": 0.2
                 },
                 "rnn": {
                     "rnn_hidden_size": 600,
                     "rnn_layers": 2,
                     "bidirectional": True,
-                    "rnn_dropout": 0.5,
+                    "rnn_dropout": 0.3,
                     "cell_type": "gru"
                 },
                 "regression": {
@@ -497,7 +497,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             },
             "optimizer" : {
                 "learning_rate": 0.001,
-                "weight_decay": 0.001,
+                "weight_decay": 0.00001,
                 "lr_scheduling_milestones": [2, 7, 15, 19]
             }
         }
@@ -730,7 +730,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "embedding_layer": {
                     "embedding_dims": 300,
-                    "embedding_dropout": 0.3,
+                    "embedding_dropout": 0.1,
                     "preload_word_vectors": True,
                     "train_embeddings": True
                 },
@@ -738,13 +738,13 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "cnn_kernel_dims": 500,
                     "cnn_kernel_sizes": [3, 5, 9, 13],
                     "cnn_layers": 1,
-                    "cnn_dropout": 0.4
+                    "cnn_dropout": 0.2
                 },
                 "rnn": {
                     "rnn_hidden_size": 600,
                     "rnn_layers": 2,
                     "bidirectional": True,
-                    "rnn_dropout": 0.5,
+                    "rnn_dropout": 0.3,
                     "cell_type": "gru"
                 }
             },
@@ -782,7 +782,7 @@ THE_BOOK_OF_EXPERIMENTS = {
             "pipeline": {
                 "embedding_layer": {
                     "embedding_dims": 300,
-                    "embedding_dropout": 0.3,
+                    "embedding_dropout": 0.1,
                     "preload_word_vectors": True,
                     "train_embeddings": False
                 },
@@ -790,13 +790,13 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "cnn_kernel_dims": 500,
                     "cnn_kernel_sizes": [3, 5, 9, 13],
                     "cnn_layers": 1,
-                    "cnn_dropout": 0.4
+                    "cnn_dropout": 0.2
                 },
                 "rnn": {
                     "rnn_hidden_size": 600,
                     "rnn_layers": 2,
                     "bidirectional": True,
-                    "rnn_dropout": 0.5,
+                    "rnn_dropout": 0.3,
                     "cell_type": "gru"
                 }
             },
@@ -1124,7 +1124,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "hidden_size": 256,
                 "memory_dims": 256,
                 "num_hop": 3,
-                "dropout": 0.5,
+                "dropout": 0.1,
                 "preload_word_vectors": True,
                 "trainable_embeddings": False
             },
@@ -1166,7 +1166,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "hidden_size": 256,
                 "memory_dims": 256,
                 "num_hop": 5,
-                "dropout": 0.5,
+                "dropout": 0.1,
                 "preload_word_vectors": True,
                 "trainable_embeddings": False
             },
@@ -1498,7 +1498,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "hidden_size": 256,
                         "memory_dims": 256,
                         "num_hop": 3,
-                        "dropout": 0.5,
+                        "dropout": 0.1,
                         "preload_word_vectors": True,
                         "trainable_embeddings": False
                     },
@@ -1540,7 +1540,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "hidden_size": 256,
                         "memory_dims": 256,
                         "num_hop": 5,
-                        "dropout": 0.5,
+                        "dropout": 0.1,
                         "preload_word_vectors": True,
                         "trainable_embeddings": False
                     },
@@ -1700,7 +1700,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "pipeline": {
                         "embedding_layer": {
                             "embedding_dims": 300,
-                            "embedding_dropout": 0.5,
+                            "embedding_dropout": 0.1,
                             "preload_word_vectors": True,
                             "train_embeddings": False
                         },
@@ -1708,13 +1708,13 @@ THE_BOOK_OF_EXPERIMENTS = {
                             "cnn_kernel_dims": 500,
                             "cnn_kernel_sizes": [3, 5, 9, 13],
                             "cnn_layers": 1,
-                            "cnn_dropout": 0.5
+                            "cnn_dropout": 0.2
                         },
                         "rnn": {
                             "rnn_hidden_size": 600,
                             "rnn_layers": 2,
                             "bidirectional": True,
-                            "rnn_dropout": 0.5,
+                            "rnn_dropout": 0.3,
                             "cell_type": "gru"
                         },
                         "regression": {
@@ -1723,7 +1723,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     },
                     "optimizer" : {
                         "learning_rate": 0.001,
-                        "weight_decay": 0.001,
+                        "weight_decay": 0.00001,
                         "lr_scheduling_milestones": [2, 7, 15, 19]
                     }
                 },
@@ -1748,7 +1748,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "batch_size": 32,
                         "evaluate_every": 100,
                         "save_every": 100,
-                        "early_stopping_delta": 0.1,
+                        "early_stopping_delta": 0.0,
                         "patience": 12,
                         "train_on_gpu": True,
                         "save_embeddings": False
@@ -1756,7 +1756,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "pipeline": {
                         "embedding_layer": {
                             "embedding_dims": 300,
-                            "embedding_dropout": 0.5,
+                            "embedding_dropout": 0.1,
                             "preload_word_vectors": True,
                             "train_embeddings": False
                         },
@@ -1764,13 +1764,13 @@ THE_BOOK_OF_EXPERIMENTS = {
                             "cnn_kernel_dims": 500,
                             "cnn_kernel_sizes": [3, 5, 9, 13],
                             "cnn_layers": 1,
-                            "cnn_dropout": 0.5
+                            "cnn_dropout": 0.2
                         },
                         "rnn": {
                             "rnn_hidden_size": 600,
                             "rnn_layers": 2,
                             "bidirectional": True,
-                            "rnn_dropout": 0.5,
+                            "rnn_dropout": 0.3,
                             "cell_type": "gru"
                         },
                         "regression": {
@@ -1779,7 +1779,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     },
                     "optimizer" : {
                         "learning_rate": 0.001,
-                        "weight_decay": 0.001,
+                        "weight_decay": 0.00001,
                         "lr_scheduling_milestones": [2, 7, 15, 19]
                     }
                 }
@@ -1906,17 +1906,17 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "hidden_size": 256,
                     "memory_dims": 256,
                     "num_hop": 3,
-                    "dropout": 0.5,
+                    "dropout": 0.1,
                     "preload_word_vectors": True,
                     "trainable_embeddings": False
                 },
                 "regression": {
-                    "activation": "sigmoid"
+                    "activation": "relu"
                 }
             },
             "optimizer" : {
                 "learning_rate": 0.001,
-                "weight_decay": 0.001,
+                "weight_decay": 0.00001,
                 "lr_scheduling_milestones": [2, 7, 15, 19]
             }
 
@@ -1949,7 +1949,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "hidden_size": 256,
                     "memory_dims": 256,
                     "num_hop": 5,
-                    "dropout": 0.5,
+                    "dropout": 0.1,
                     "preload_word_vectors": True,
                     "trainable_embeddings": False
                 },
@@ -1958,7 +1958,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 },
                 "optimizer" : {
                     "learning_rate": 0.001,
-                    "weight_decay": 0.001,
+                    "weight_decay": 0.00001,
                     "lr_scheduling_milestones": [2, 7, 15, 19]
                 }
                 }

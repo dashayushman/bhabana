@@ -411,7 +411,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "evaluate_every": 100,
                 "save_every": 100,
                 "early_stopping_delta": 0.0,
-                "patience": 12,
+                "patience": 100000,
                 "train_on_gpu": True,
                 "save_embeddings": False
             },
@@ -719,7 +719,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "evaluate_every": 100,
                 "save_every": 100,
                 "early_stopping_delta": 0.0,
-                "patience": 20,
+                "patience": 100000,
                 "train_on_gpu": True,
                 "save_embeddings": False
             },
@@ -1059,7 +1059,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "evaluate_every": 100,
                 "save_every": 100,
                 "early_stopping_delta": 0.0,
-                "patience": 20,
+                "patience": 100000,
                 "train_on_gpu": True,
                 "save_embeddings": False
             },
@@ -1100,8 +1100,8 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "batch_size": 32,
                 "evaluate_every": 100,
                 "save_every": 100,
-                "early_stopping_delta": 0.01,
-                "patience": 20,
+                "early_stopping_delta": 0.00,
+                "patience": 100000,
                 "train_on_gpu": True,
                 "save_embeddings": False
             },
@@ -1433,7 +1433,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "evaluate_every": 100,
                         "save_every": 100,
                         "early_stopping_delta": 0.0,
-                        "patience": 20,
+                        "patience": 100000,
                         "train_on_gpu": True,
                         "save_embeddings": False
                     },
@@ -1475,7 +1475,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "evaluate_every": 100,
                         "save_every": 100,
                         "early_stopping_delta": 0.0,
-                        "patience": 20,
+                        "patience": 100000,
                         "train_on_gpu": True,
                         "save_embeddings": False
                     },
@@ -1637,7 +1637,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "evaluate_every": 100,
                         "save_every": 100,
                         "early_stopping_delta": 0.0,
-                        "patience": 12,
+                        "patience": 100000,
                         "train_on_gpu": True,
                         "save_embeddings": False
                     },
@@ -1693,7 +1693,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                         "evaluate_every": 100,
                         "save_every": 100,
                         "early_stopping_delta": 0.0,
-                        "patience": 12,
+                        "patience": 100000,
                         "train_on_gpu": True,
                         "save_embeddings": False
                     },
@@ -1841,7 +1841,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                 "evaluate_every": 100,
                 "save_every": 100,
                 "early_stopping_delta": 0.0,
-                "patience": 20,
+                "patience": 100000,
                 "train_on_gpu": True,
                 "save_embeddings": False
             },
@@ -1884,7 +1884,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "evaluate_every": 100,
                     "save_every": 100,
                     "early_stopping_delta": 0.0,
-                    "patience": 20,
+                    "patience": 100000,
                     "train_on_gpu": True,
                     "save_embeddings": False
                 },

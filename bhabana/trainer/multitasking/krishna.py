@@ -5,6 +5,7 @@ import shutil
 import codecs
 import collections
 
+import bhabana.trainer.training_configs as configs
 import numpy as np
 import torch.nn as nn
 import bhabana.utils as utils
@@ -207,10 +208,13 @@ class KrishnaTrainer(Trainer):
         self.pipeline.eval()
         batch = {"text": text_tensor, "training": False, "hidden": self.get_rnn_hidden()}
         output = self.pipeline(batch)
+        output["clf_out"] = torch.nn.functional.softmax(output["clf_out"],
+                                                        dim=1)
         reg_pred = output["reg_out"].data.cpu().numpy() if \
             self.train_on_gpu else output["reg_out"].data.numpy()
         clf_pred = output["clf_out"].data.cpu().numpy() if \
             self.train_on_gpu else output["clf_out"].data.numpy()
+
         return reg_pred, clf_pred
 
     def _set_trackers(self):
@@ -626,7 +630,7 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
     return pipeline
 
 @ex.automain
-def run_pipeline(experiment_name, dataset, setup, pipeline,
+def run_pipeline(experiment_name, mode, dataset, setup, pipeline,
                  optimizer, experiment_config, _log, _run):
     ds = get_dataset_class(dataset_config=dataset)
     pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
@@ -650,5 +654,42 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                                  train_on_gpu=setup["train_on_gpu"],
                                  eval_test=setup["eval_test"],
                                  eval_val=setup["eval_val"])
-    trainer.run()
+    if mode == "train":
+        trainer.run()
+    elif mode == "predict":
+        return trainer
 
+
+@ex.command
+def predict(experiment_name, dataset, setup, pipeline,
+                 optimizer, _log, _run):
+
+    config = configs.THE_BOOK_OF_EXPERIMENTS["krishna"]["kaggle_sentiment"]
+    config["setup"]["experiment_name"] = config["setup"]["experiment_name"] +\
+                                         "_krishna_kaggle_sentiment_{" \
+                                         "}".format(0)
+    config["experiment_name"] = config["setup"]["experiment_name"]
+    experiment_config = experiment_boilerplate(config["setup"])
+    dataset = {**dataset, **config["dataset"]}
+    setup = {**setup, **config["setup"]}
+    pipeline = {**pipeline, **config["pipeline"]}
+    optimizer = {**optimizer, **config["optimizer"]}
+    trainer = run_pipeline(experiment_name, "predict", dataset, setup, pipeline,
+                 optimizer, experiment_config, _log, _run)
+    path = os.path.join(os.path.dirname(__file__), "kaggle_sentiment_test.tsv")
+    with open(path, "r") as f, open("submission.txt", "w") as wf, \
+            open("results.txt", "w") as rf:
+        wf.write("PhraseId,Sentiment\n")
+        rf.write("PhraseId,Sentiment\n")
+        skip = True
+        for line in f:
+            if skip:
+                skip = False
+                continue
+            cols = line.strip().split("\t")
+            phrase_id = int(cols[0])
+            text = cols[-1]
+            reg_pred, clf_pred = trainer.predict(text)
+            cls = np.argmax(clf_pred, axis=1)
+            wf.write("{},{}\n".format(phrase_id, cls))
+            rf.write("{},{}\n".format(phrase_id, clf_pred))

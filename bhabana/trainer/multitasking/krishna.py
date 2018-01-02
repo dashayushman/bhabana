@@ -629,37 +629,6 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
           rnn_dropout=pipeline_config["rnn"]["rnn_dropout"])
     return pipeline
 
-@ex.automain
-def run_pipeline(experiment_name, mode, dataset, setup, pipeline,
-                 optimizer, experiment_config, _log, _run):
-    ds = get_dataset_class(dataset_config=dataset)
-    pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
-                            pretrained_word_vectors=ds.w2v, n_classes=ds.n_classes)
-    trainer = KrishnaTrainer(experiment_name=experiment_name,
-                                 pipeline=pipeline, dataset=ds,
-                                 experiment_config=experiment_config,
-                                 logger=_log,
-                                 run=_run,
-                                 n_epochs=setup["epochs"],
-                                 batch_size=setup["batch_size"],
-                                 max_seq_length=dataset["max_seq_length"],
-                                 n_workers=dataset["n_workers"],
-                                 early_stopping_delta=setup[
-                                     "early_stopping_delta"],
-                                 patience=setup["patience"],
-                                 save_every=setup["save_every"],
-                                 evaluate_every=setup["evaluate_every"],
-                                 learning_rate=optimizer["learning_rate"],
-                                 weight_decay=optimizer["weight_decay"],
-                                 train_on_gpu=setup["train_on_gpu"],
-                                 eval_test=setup["eval_test"],
-                                 eval_val=setup["eval_val"])
-    if mode == "train":
-        trainer.run()
-    elif mode == "predict":
-        return trainer
-
-
 @ex.command
 def predict(experiment_name, dataset, setup, pipeline,
                  optimizer, _log, _run):
@@ -691,3 +660,33 @@ def predict(experiment_name, dataset, setup, pipeline,
             cls = np.argmax(clf_pred, axis=1)
             wf.write("{},{}\n".format(phrase_id, cls))
             rf.write("{},{}\n".format(phrase_id, clf_pred))
+
+@ex.automain
+def run_pipeline(experiment_name, mode, dataset, setup, pipeline,
+                 optimizer, experiment_config, _log, _run):
+    ds = get_dataset_class(dataset_config=dataset)
+    pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
+                            pretrained_word_vectors=ds.w2v, n_classes=ds.n_classes)
+    trainer = KrishnaTrainer(experiment_name=experiment_name,
+                                 pipeline=pipeline, dataset=ds,
+                                 experiment_config=experiment_config,
+                                 logger=_log,
+                                 run=_run,
+                                 n_epochs=setup["epochs"],
+                                 batch_size=setup["batch_size"],
+                                 max_seq_length=dataset["max_seq_length"],
+                                 n_workers=dataset["n_workers"],
+                                 early_stopping_delta=setup[
+                                     "early_stopping_delta"],
+                                 patience=setup["patience"],
+                                 save_every=setup["save_every"],
+                                 evaluate_every=setup["evaluate_every"],
+                                 learning_rate=optimizer["learning_rate"],
+                                 weight_decay=optimizer["weight_decay"],
+                                 train_on_gpu=setup["train_on_gpu"],
+                                 eval_test=setup["eval_test"],
+                                 eval_val=setup["eval_val"])
+    if mode == "train":
+        trainer.run()
+    elif mode == "predict":
+        return trainer

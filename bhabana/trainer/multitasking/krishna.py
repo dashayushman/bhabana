@@ -50,6 +50,7 @@ def my_config():
 
     experiment_name = "SA_EMBED_NGRAM_CNN_RNN"
     experiment_description = "default experiment"
+    mode = "train"
     dataset = {
         "name": "IMDB",
         "n_workers": 1,
@@ -71,7 +72,9 @@ def my_config():
         "early_stopping_delta": 0,
         "patience": 10,
         "train_on_gpu": True,
-        "data_parallel": False
+        "data_parallel": False,
+        "eval_test": True,
+        "eval_val": True
     }
     pipeline = {
         "embedding_layer": {
@@ -145,8 +148,11 @@ class KrishnaTrainer(Trainer):
                  logger, run, n_epochs=10, batch_size=64, max_seq_length=0,
                  n_workers=4, early_stopping_delta=0, patience=5,
                  save_every=100, evaluate_every=100, learning_rate=0.001,
-                 weight_decay=0.0, train_on_gpu=True):
+                 weight_decay=0.0, train_on_gpu=True, eval_test=True,
+                 eval_val=True):
         self.experiment_name = experiment_name
+        self.eval_val = eval_val
+        self.eval_test = eval_test
         self.logger = logger
         self.sacred_run = run
         self.pipeline = pipeline
@@ -179,6 +185,33 @@ class KrishnaTrainer(Trainer):
         #self._set_dataloaders()
         self.sequence_decoder = Id2Seq(i2w=self.dataset.vocab["word"][1],
                                        mode="word", batch=True)
+
+    def preprocess(self, text):
+        processed_fields = []
+        if hasattr(self.dataset.fields[0]["processors"], "__iter__"):
+            for processor in self.dataset.fields[0]["processors"]:
+                if processor.add_to_output:
+                    processed_fields.append(processor(text))
+        else:
+            if self.dataset.fields[0]["processors"].add_to_output:
+                processed_fields.append(self.dataset.fields[0]["processors"](
+                        text))
+        return processed_fields[0]["text"]
+
+    def predict(self, text):
+        processed_text = self.preprocess(text)
+        if self.train_on_gpu:
+            text_tensor = Variable(torch.LongTensor([processed_text]).pin_memory().cuda())
+        else:
+            text_tensor = Variable(torch.LongTensor([processed_text]))
+        self.pipeline.eval()
+        batch = {"text": text_tensor, "training": False, "hidden": self.get_rnn_hidden()}
+        output = self.pipeline(batch)
+        reg_pred = output["reg_out"].data.cpu().numpy() if \
+            self.train_on_gpu else output["reg_out"].data.numpy()
+        clf_pred = output["clf_out"].data.cpu().numpy() if \
+            self.train_on_gpu else output["clf_out"].data.numpy()
+        return reg_pred, clf_pred
 
     def _set_trackers(self):
         self.current_epoch = 0
@@ -245,7 +278,8 @@ class KrishnaTrainer(Trainer):
             for i_train, train_batch in self.dataloader["train"]:
                 self.train(train_batch)
                 self.pipeline.eval()
-                if self.time_to_evaluate(self.evaluate_every, i_train):
+                if self.time_to_evaluate(self.evaluate_every, i_train) and \
+                        self.eval_val:
                     self.logger.info("Evaluating: mode=Validation")
                     if _once_val:
                         self.restart_dataloader("validation")
@@ -266,13 +300,15 @@ class KrishnaTrainer(Trainer):
 
     def _post_epoch_routine(self, once_test):
         self.pipeline.eval()
-        self.logger.info("Evaluating: mode=Validation")
-        self.run_evaluation_epoch(self.dataloader["validation"],
-                                  mode="validation", write_results=True)
-        self.logger.info("Evaluating: mode=Test")
-        if once_test: self.restart_dataloader("test")
-        self.run_evaluation_epoch(self.dataloader["test"], mode="test",
-                                  write_results=True)
+        if self.eval_val:
+            self.logger.info("Evaluating: mode=Validation")
+            self.run_evaluation_epoch(self.dataloader["validation"],
+                                      mode="validation", write_results=True)
+        if self.eval_test:
+            self.logger.info("Evaluating: mode=Test")
+            if once_test: self.restart_dataloader("test")
+            self.run_evaluation_epoch(self.dataloader["test"], mode="test",
+                                      write_results=True)
         self.save()
         #self.log_tf_embeddings()
         self.pipeline.train()
@@ -423,7 +459,7 @@ class KrishnaTrainer(Trainer):
                     self.best_model_path)))
 
     def save(self):
-        if self.loss_has_improved():
+        if self.loss_has_improved() or self.eval_val == False:
             self.logger.info("Saving Model as the loss has improved")
             checkpoint_path = os.path.join(self.experiment_config[
               "checkpoints_dir"], "model_{}_{}.pth.tar".format(self.current_epoch,
@@ -556,6 +592,13 @@ def get_dataset_class(dataset_config):
                   spacy_model_name=dataset_config["spacy_model_name"],
                   aux=["word"], cuda=dataset_config["cuda"],
                   rescale=dataset_config["rescale"])
+    elif dataset_config["name"].lower() == "kaggle_sentiment":
+        ds = SentimentTreebank(mode="regression",
+                  use_spacy_vocab=dataset_config["use_spacy_vocab"],
+                  load_spacy_vectors=dataset_config["load_spacy_vectors"],
+                  spacy_model_name=dataset_config["spacy_model_name"],
+                  aux=["word"], cuda=dataset_config["cuda"],
+                  rescale=dataset_config["rescale"])
     else:
         raise NotImplementedError("{} dataset has not been "
                                   "implemented".format(dataset_config["name"]))
@@ -604,5 +647,8 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                                  evaluate_every=setup["evaluate_every"],
                                  learning_rate=optimizer["learning_rate"],
                                  weight_decay=optimizer["weight_decay"],
-                                 train_on_gpu=setup["train_on_gpu"])
+                                 train_on_gpu=setup["train_on_gpu"],
+                                 eval_test=setup["eval_test"],
+                                 eval_val=setup["eval_val"])
     trainer.run()
+

@@ -664,10 +664,8 @@ def run_pipeline(experiment_name, mode, dataset, setup, pipeline,
 def predict(experiment_name, dataset, setup, pipeline,
                  optimizer, _log, _run):
 
-    config = configs.THE_BOOK_OF_EXPERIMENTS["krishna"]["kaggle_sentiment"]
-    config["setup"]["experiment_name"] = config["setup"]["experiment_name"] +\
-                                         "_krishna_kaggle_sentiment_{" \
-                                         "}".format(0)
+    config = configs.THE_BOOK_OF_EXPERIMENTS["krishna"]["stanford_sentiment_treebank"]
+    config["setup"]["experiment_name"] = "SA_EMBED_NGRAM_CNN_RNN_MULTITASK_krishna_stanford_sentiment_treebank_0"
     config["experiment_name"] = config["setup"]["experiment_name"]
     experiment_config = experiment_boilerplate(config["setup"])
     dataset = {**dataset, **config["dataset"]}

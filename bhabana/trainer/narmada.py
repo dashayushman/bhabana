@@ -9,6 +9,7 @@ import numpy as np
 import torch.nn as nn
 import bhabana.utils as utils
 
+from tqdm import tqdm
 from torch import optim
 from sacred import Experiment
 from bhabana.datasets import IMDB
@@ -68,7 +69,8 @@ def my_config():
         "early_stopping_delta": 0,
         "patience": 10,
         "train_on_gpu": True,
-        "data_parallel": False
+        "data_parallel": False,
+        "mode": "train"
     }
     pipeline = {
         "memory": {
@@ -247,6 +249,23 @@ class NarmadaTrainer(Trainer):
                 self.closure()
                 break
 
+    def test(self):
+        self.load()
+        self.pipeline.eval()
+        self.logger.info("Evaluating: mode=Validation")
+        self.restart_dataloader("validation")
+        self.run_evaluation_epoch(self.dataloader["validation"],
+                                  mode="validation", write_results=True,
+                                  write_vectors=True)
+        self.logger.info("Evaluating: mode=Test")
+        self.restart_dataloader("test")
+        self.run_evaluation_epoch(self.dataloader["test"], mode="test",
+                                  write_results=True,
+                                  write_vectors=True)
+        self.save()
+        self.pipeline.train()
+        self.restart_dataloader("train")
+
     def _post_epoch_routine(self, once_test):
         self.pipeline.eval()
         self.logger.info("Evaluating: mode=Validation")
@@ -313,28 +332,49 @@ class NarmadaTrainer(Trainer):
             self.log("training.pearson_correlation_p_val", p_val)
 
     def run_evaluation_epoch(self, dataloader, mode="validation",
-                             write_results=False):
+                             write_results=False, write_vectors=True,
+                             verbose=False):
         val_losses = []
         val_pcs = []
-        for i_val, val_batch in dataloader:
-            pred, gt, val_loss, val_pc, val_p_val = self.evaluate(val_batch)
+        for i_val, val_batch in tqdm(dataloader):
+            pred, gt, val_loss, val_pc, val_p_val, output = self.evaluate(
+                    val_batch)
             val_losses.append(val_loss)
             val_pcs.append(val_pc)
             if write_results:
                 self.write_results_to_file(i_val, val_batch["text"], pred,
                                            gt, mode)
             if i_val % 10 == 0:
-                self.logger.info("Epoch: {}\tGlobal Step: {}\t"
-                                 "Mode: {}\tLoss: {}\tPC: {}\tBatch "
-                                 "Number: {}".format(
-                        self.current_epoch, self.global_step, mode,
-                        val_loss, val_pc, i_val))
+                if verbose:
+                    self.logger.info("Epoch: {}\tGlobal Step: {}\t"
+                                     "Mode: {}\tLoss: {}\tPC: {}\tBatch "
+                                     "Number: {}".format(
+                            self.current_epoch, self.global_step, mode,
+                            val_loss, val_pc, i_val))
+            if write_vectors:
+                self.dump_output(output, i_val, mode)
         avg_loss, avg_pc = np.average(val_losses), np.average(val_pcs)
         self.log("{}.average_loss".format(mode), avg_loss)
         self.log("{}.average_pearson_correlation".format(mode), avg_pc)
         if mode == "validation":
             self.update_loss_history(avg_loss)
         self.restart_dataloader(mode)
+
+    def dump_output(self, output, batch_id, mode):
+
+        dump_dir = os.path.join(self.experiment_config["{}_results".format(mode)],
+                                                       "dumps")
+        if not os.path.exists(dump_dir):
+            os.makedirs(dump_dir)
+
+        file_path = os.path.join(dump_dir, "{}_epoch_{}_batch_{}.npy".format(mode,
+                                                          self.current_epoch,
+                                                          batch_id))
+        out = [o.data.cpu().numpy() if
+               self.train_on_gpu else o.data.numpy() for o in output["attention"]]
+        #out = out.data.cpu().numpy() if self.train_on_gpu else out.data.numpy()
+        out = np.array(out)
+        np.save(file_path, out)
 
     def restart_dataloader(self, mode):
         self.dataloader[mode] = self.dataset.get_batch(split=mode,
@@ -356,7 +396,7 @@ class NarmadaTrainer(Trainer):
         pc, p_val = self.metric(np.squeeze(pred, axis=1), gt)
 
         scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
-        return pred, gt, scalar_loss, pc, p_val
+        return pred, gt, scalar_loss, pc, p_val, output
 
     def load(self):
         self.logger.info("Trying to load checkpoint from '{}'".format(
@@ -558,4 +598,9 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                                  lr_scheduling_milestones=optimizer[
                                      "lr_scheduling_milestones"],
                                  pipeline_config=pipeline_config)
-    trainer.run()
+    if setup["mode"].lower() == "train":
+        trainer.run()
+    elif setup["mode"].lower() == "test":
+        trainer.test()
+    else:
+        raise ValueError("Mode: {}, is not defined")

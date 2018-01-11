@@ -1739,7 +1739,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                                           "weight decay",
                 "dataset": {
                     "name": "kaggle_sentiment",
-                    "n_workers": 5,
+                    "n_workers": 2,
                     "use_spacy_vocab": True,
                     "load_spacy_vectors": True,
                     "max_seq_length": 0,
@@ -1755,7 +1755,10 @@ THE_BOOK_OF_EXPERIMENTS = {
                     "train_on_gpu": True,
                     "save_embeddings": False,
                     "eval_test": False,
-                    "eval_val": False
+                    "eval_val": False,
+                    "load_path":
+                        "/home/mindgarage07/.bhabana/experiments/SA_EMBED_NGRAM_CNN_RNN_MULTITASK_krishna_stanford_sentiment_treebank_0/checkpoints/best_model.pth.tar",
+                    "fine_tuning": True
                 },
                 "pipeline": {
                     "embedding_layer": {
@@ -1766,7 +1769,7 @@ THE_BOOK_OF_EXPERIMENTS = {
                     },
                     "ngram_cnn": {
                         "cnn_kernel_dims": 500,
-                        "cnn_kernel_sizes": [1, 3, 5, 9, 13],
+                        "cnn_kernel_sizes": [3, 5, 9, 13],
                         "cnn_layers": 1,
                         "cnn_dropout": 0.2
                     },

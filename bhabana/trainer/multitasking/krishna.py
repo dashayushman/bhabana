@@ -9,12 +9,15 @@ import bhabana.trainer.training_configs as configs
 import numpy as np
 import torch.nn as nn
 import bhabana.utils as utils
+import bhabana.utils.constants as constants
 
+from tqdm import tqdm
 from torch import optim
 from sacred import Experiment
 from bhabana.datasets import IMDB
 from bhabana.datasets import AmazonReviews
 from bhabana.datasets import SentimentTreebank
+from bhabana.datasets import KaggleSentiment
 from bhabana.trainer import Trainer
 from torch.autograd import Variable
 from bhabana.processing import Id2Seq
@@ -27,7 +30,7 @@ from bhabana.metrics import FMeasure
 from bhabana.metrics import ClassificationReport
 from torch.optim.lr_scheduler import MultiStepLR
 from bhabana.pipeline import EmbeddingNgramCNNRNNMultiTask
-
+from bhabana.utils import data_utils as du
 
 
 slack_config_file_path = os.path.join(os.path.dirname(__file__), "slack.json")
@@ -75,7 +78,10 @@ def my_config():
         "train_on_gpu": True,
         "data_parallel": False,
         "eval_test": True,
-        "eval_val": True
+        "eval_val": True,
+        "load_path": None,
+        "fine_tuning": False,
+        "mode": "train"
     }
     pipeline = {
         "embedding_layer": {
@@ -150,7 +156,7 @@ class KrishnaTrainer(Trainer):
                  n_workers=4, early_stopping_delta=0, patience=5,
                  save_every=100, evaluate_every=100, learning_rate=0.001,
                  weight_decay=0.0, train_on_gpu=True, eval_test=True,
-                 eval_val=True):
+                 eval_val=True, load_path=None, fine_tuning=False):
         self.experiment_name = experiment_name
         self.eval_val = eval_val
         self.eval_test = eval_test
@@ -186,6 +192,8 @@ class KrishnaTrainer(Trainer):
         #self._set_dataloaders()
         self.sequence_decoder = Id2Seq(i2w=self.dataset.vocab["word"][1],
                                        mode="word", batch=True)
+        self.load_path = load_path
+        self.fine_tuning = fine_tuning
 
     def preprocess(self, text):
         processed_fields = []
@@ -199,17 +207,18 @@ class KrishnaTrainer(Trainer):
                         text))
         return processed_fields[0]["text"]
 
-    def predict(self, text):
-        processed_text = self.preprocess(text)
+    def predict(self, text, batch_size):
+        processed_text = text
+        #processed_text.append(constants.PAD)
         if self.train_on_gpu:
-            text_tensor = Variable(torch.LongTensor([processed_text]).pin_memory().cuda())
+            text_tensor = Variable(torch.LongTensor(processed_text).pin_memory().cuda())
         else:
-            text_tensor = Variable(torch.LongTensor([processed_text]))
+            text_tensor = Variable(torch.LongTensor(processed_text))
         self.pipeline.eval()
-        batch = {"text": text_tensor, "training": False, "hidden": self.get_rnn_hidden()}
+        batch = {"inputs": text_tensor, "training": False, "hidden":
+            self.get_rnn_hidden(batch_size)}
         output = self.pipeline(batch)
-        output["clf_out"] = torch.nn.functional.softmax(output["clf_out"],
-                                                        dim=1)
+        output["clf_out"] = torch.nn.functional.softmax(output["clf_out"])
         reg_pred = output["reg_out"].data.cpu().numpy() if \
             self.train_on_gpu else output["reg_out"].data.numpy()
         clf_pred = output["clf_out"].data.cpu().numpy() if \
@@ -270,7 +279,8 @@ class KrishnaTrainer(Trainer):
         self.run()
 
     def run(self):
-        self.load()
+        if self.load_path is not None:
+            self.load(self.load_path)
         _once_train , _once_val, _once_test = True, True, True
         for epoch in range(self.current_epoch, self.n_epochs):
             self.pipeline.train()
@@ -302,6 +312,23 @@ class KrishnaTrainer(Trainer):
                 self.closure()
                 break
 
+    def test(self):
+        self.load()
+        self.pipeline.eval()
+        self.logger.info("Evaluating: mode=Validation")
+        self.restart_dataloader("validation")
+        self.run_evaluation_epoch(self.dataloader["validation"],
+                                  mode="validation", write_results=True,
+                                  write_vectors=True)
+        self.logger.info("Evaluating: mode=Test")
+        self.restart_dataloader("test")
+        self.run_evaluation_epoch(self.dataloader["test"], mode="test",
+                                  write_results=True,
+                                  write_vectors=True)
+        self.save()
+        self.pipeline.train()
+        self.restart_dataloader("train")
+
     def _post_epoch_routine(self, once_test):
         self.pipeline.eval()
         if self.eval_val:
@@ -318,8 +345,9 @@ class KrishnaTrainer(Trainer):
         self.pipeline.train()
         self.restart_dataloader("train")
 
-    def get_rnn_hidden(self):
-        hidden = self.pipeline.init_rnn_hidden(self.batch_size,
+    def get_rnn_hidden(self, batch_size=None):
+        batch_size = batch_size if batch_size is not None else self.batch_size
+        hidden = self.pipeline.init_rnn_hidden(batch_size,
                                                self.train_on_gpu)
         return hidden
 
@@ -374,12 +402,14 @@ class KrishnaTrainer(Trainer):
         return results[0], results[1], results[2]
 
     def run_evaluation_epoch(self, dataloader, mode="validation",
-                             write_results=False):
+                             write_results=False, write_vectors=True,
+                             verbose=False):
         val_losses, val_reg_losses, val_clf_losses, val_pcs, val_accs,\
         val_fscores = [], [], [], [], [], []
         for i_val, val_batch in dataloader:
             reg_pred, reg_gt, clf_pred, clf_gt, val_loss, val_reg_loss, \
-            val_clf_loss, val_pc, val_p_val, acc, f_score, clf_rpt = self.evaluate(val_batch)
+            val_clf_loss, val_pc, val_p_val, acc, f_score, clf_rpt, output \
+                = self.evaluate(val_batch)
             val_losses.append(val_loss)
             val_pcs.append(val_pc)
             val_accs.append(acc)
@@ -390,12 +420,15 @@ class KrishnaTrainer(Trainer):
                 self.write_results_to_file(i_val, val_batch["text"], reg_pred,
                                            reg_gt, clf_pred, clf_gt, mode)
             if i_val % 10 == 0:
-                self.logger.info("Epoch: {}\tGlobal Step: {}\t"
-                                 "Mode: {}\tLoss: {}\tPC: {}\t"
-                                 "Acc: {}\tF1: {}\tBatch "
-                                 "Number: {}".format(
-                        self.current_epoch, self.global_step, mode,
-                        val_loss, val_pc, acc, f_score, i_val))
+                if verbose:
+                    self.logger.info("Epoch: {}\tGlobal Step: {}\t"
+                                     "Mode: {}\tLoss: {}\tPC: {}\t"
+                                     "Acc: {}\tF1: {}\tBatch "
+                                     "Number: {}".format(
+                            self.current_epoch, self.global_step, mode,
+                            val_loss, val_pc, acc, f_score, i_val))
+            if write_vectors:
+                self.dump_output(output, i_val, mode)
         avg_loss, avg_pc, = np.average(val_losses), np.average(val_pcs)
         self.log("{}.average_loss".format(mode), avg_loss)
         avg_reg_loss = np.average(val_reg_losses)
@@ -410,6 +443,23 @@ class KrishnaTrainer(Trainer):
         if mode == "validation":
             self.update_loss_history(avg_loss)
         self.restart_dataloader(mode)
+
+    def dump_output(self, output, batch_id, mode):
+
+        attn_dir = os.path.join(
+                self.experiment_config["{}_results".format(mode)],
+                "attns")
+        dump_dir = os.path.join(self.experiment_config["{}_results".format(mode)],
+                                                       "dumps")
+        if not os.path.exists(dump_dir): os.makedirs(dump_dir)
+        if not os.path.exists(attn_dir): os.makedirs(attn_dir)
+
+        file_path = os.path.join(dump_dir, "{}_epoch_{}_batch_{}.npy".format(mode,
+                                                          self.current_epoch,
+                                                          batch_id))
+        out = output["3.RecurrentBlock.out"]
+        out = out.data.cpu().numpy() if self.train_on_gpu else out.data.numpy()
+        np.save(file_path, out)
 
     def evaluate(self, batch):
         batch["inputs"] = batch["text"]
@@ -441,26 +491,29 @@ class KrishnaTrainer(Trainer):
 
         return reg_pred, reg_gt, clf_pred, clf_gt, scalar_loss, \
                scalar_reg_loss, scalar_clf_loss, pc, p_val, acc, f_score, \
-               clf_rpt
+               clf_rpt, output
 
-    def load(self):
+    def load(self, model_path=None):
+        model_path = model_path if model_path is not None else self.best_model_path
         self.logger.info("Trying to load checkpoint from '{}'".format(
-                self.best_model_path))
-        if os.path.exists(self.best_model_path):
+                model_path))
+        if os.path.exists(model_path):
             self.logger.info("Found checkpoint. Attemptimg to load it")
-            checkpoint = torch.load(self.best_model_path)
-            self.current_epoch = checkpoint['epoch']
-            self.global_step = checkpoint['global_step']
+            checkpoint = torch.load(model_path)
+            self.current_epoch = checkpoint['epoch'] if not self.fine_tuning \
+                else 0
+            self.global_step = checkpoint['global_step'] if not self.fine_tuning \
+                else 0
             self.best_loss = checkpoint['best_loss']
             self.pipeline.load_state_dict(checkpoint['state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer'])
             self.logger.info("Loaded checkpoint from: '{}'\n"
-             " Current Epoch: {}\n Best Loss: {}".format(self.best_model_path,
+             " Current Epoch: {}\n Best Loss: {}".format(model_path,
                                  checkpoint['epoch'], checkpoint['best_loss']))
         else:
             self.logger.info(("Could not find checkpoint at : {} "
                               "Training fresh parameters".format(
-                    self.best_model_path)))
+                    model_path)))
 
     def save(self):
         if self.loss_has_improved() or self.eval_val == False:
@@ -597,7 +650,7 @@ def get_dataset_class(dataset_config):
                   aux=["word"], cuda=dataset_config["cuda"],
                   rescale=dataset_config["rescale"])
     elif dataset_config["name"].lower() == "kaggle_sentiment":
-        ds = SentimentTreebank(mode="regression",
+        ds = KaggleSentiment(mode="regression",
                   use_spacy_vocab=dataset_config["use_spacy_vocab"],
                   load_spacy_vectors=dataset_config["load_spacy_vectors"],
                   spacy_model_name=dataset_config["spacy_model_name"],
@@ -629,37 +682,106 @@ def get_pipeline(pipeline_config, vocab_size, pretrained_word_vectors,
           rnn_dropout=pipeline_config["rnn"]["rnn_dropout"])
     return pipeline
 
+
+def predict_pipeline(experiment_name, mode, dataset, setup, pipeline,
+                 optimizer, experiment_config, _log, _run):
+    ds = get_dataset_class(dataset_config=dataset)
+    pipeline = get_pipeline(pipeline, vocab_size=ds.vocab_sizes["word"],
+                            pretrained_word_vectors=ds.w2v, n_classes=ds.n_classes)
+    trainer = KrishnaTrainer(experiment_name=experiment_name,
+                                 pipeline=pipeline, dataset=ds,
+                                 experiment_config=experiment_config,
+                                 logger=_log,
+                                 run=_run,
+                                 n_epochs=setup["epochs"],
+                                 batch_size=32,
+                                 max_seq_length=dataset["max_seq_length"],
+                                 n_workers=dataset["n_workers"],
+                                 early_stopping_delta=setup[
+                                     "early_stopping_delta"],
+                                 patience=setup["patience"],
+                                 save_every=setup["save_every"],
+                                 evaluate_every=setup["evaluate_every"],
+                                 learning_rate=optimizer["learning_rate"],
+                                 weight_decay=optimizer["weight_decay"],
+                                 train_on_gpu=setup["train_on_gpu"],
+                                 eval_test=setup["eval_test"],
+                                 eval_val=setup["eval_val"],
+                                 fine_tuning=setup["fine_tuning"])
+    if mode == "train":
+        trainer.run()
+    elif mode == "predict":
+        return trainer
+
+
+def batchify(data, seq_max_len=0):
+    if seq_max_len != 0:
+        max_len = seq_max_len
+    else:
+        max_len = 0
+        for val in data:
+            max_len = len(val) if len(val) > max_len else max_len
+    data = du.pad_sequences(
+            data, padlen=max_len)
+    return data
+
+
 @ex.command
 def predict(experiment_name, dataset, setup, pipeline,
-                 optimizer, _log, _run):
+                 optimizer, experiment_config, _log, _run):
 
-    config = configs.THE_BOOK_OF_EXPERIMENTS["krishna"]["stanford_sentiment_treebank"]
-    config["setup"]["experiment_name"] = "SA_EMBED_NGRAM_CNN_RNN_MULTITASK_krishna_stanford_sentiment_treebank_0"
+    config = configs.THE_BOOK_OF_EXPERIMENTS["krishna"][
+        "kaggle_sentiment"][0]
+    config["setup"]["experiment_name"] = \
+        "SA_EMBED_NGRAM_CNN_RNN_MULTITASK_krishna_kaggle_sentiment_0"
     config["experiment_name"] = config["setup"]["experiment_name"]
-    experiment_config = experiment_boilerplate(config["setup"])
     dataset = {**dataset, **config["dataset"]}
     setup = {**setup, **config["setup"]}
     pipeline = {**pipeline, **config["pipeline"]}
     optimizer = {**optimizer, **config["optimizer"]}
-    trainer = run_pipeline(experiment_name, "predict", dataset, setup, pipeline,
+    #experiment_config = experiment_boilerplate(setup)
+    trainer = predict_pipeline(experiment_name, "predict", dataset, setup, pipeline,
                  optimizer, experiment_config, _log, _run)
+    load_path = "/home/mindgarage07/.bhabana/experiments" \
+                "/SA_EMBED_NGRAM_CNN_RNN_MULTITASK_krishna_kaggle_sentiment_0" \
+                "/checkpoints/best_model.pth.tar"
+    trainer.load(load_path)
     path = os.path.join(os.path.dirname(__file__), "kaggle_sentiment_test.tsv")
     with open(path, "r") as f, open("submission.txt", "w") as wf, \
             open("results.txt", "w") as rf:
         wf.write("PhraseId,Sentiment\n")
         rf.write("PhraseId,Sentiment\n")
         skip = True
-        for line in f:
+        lines = f.readlines()
+        batch, phrase_ids = [], []
+        for line in tqdm(lines):
             if skip:
                 skip = False
                 continue
             cols = line.strip().split("\t")
             phrase_id = int(cols[0])
             text = cols[-1]
-            reg_pred, clf_pred = trainer.predict(text)
-            cls = np.argmax(clf_pred, axis=1)
-            wf.write("{},{}\n".format(phrase_id, cls))
-            rf.write("{},{}\n".format(phrase_id, clf_pred))
+            phrase_ids.append(phrase_id)
+            batch.append(trainer.preprocess(text))
+            if len(batch) == 32:
+                padded_batch = batchify(batch)
+                reg_pred, clf_pred = trainer.predict(padded_batch, 32)
+                cls = np.argmax(clf_pred, axis=1)
+                for pid, c in zip(phrase_ids, cls):
+                    wf.write("{},{}\n".format(pid, c))
+                    rf.write("{},{}\n".format(pid, c))
+                batch = []
+                phrase_ids = []
+
+        padded_batch = batchify(batch)
+        reg_pred, clf_pred = trainer.predict(padded_batch, len(batch))
+        cls = np.argmax(clf_pred, axis=1)
+        for pid, c in zip(phrase_ids, cls):
+            wf.write("{},{}\n".format(pid, c))
+            rf.write("{},{}\n".format(pid, c))
+        batch = []
+        phrase_ids = []
+
 
 @ex.automain
 def run_pipeline(experiment_name, mode, dataset, setup, pipeline,
@@ -685,8 +807,12 @@ def run_pipeline(experiment_name, mode, dataset, setup, pipeline,
                                  weight_decay=optimizer["weight_decay"],
                                  train_on_gpu=setup["train_on_gpu"],
                                  eval_test=setup["eval_test"],
-                                 eval_val=setup["eval_val"])
-    if mode == "train":
+                                 eval_val=setup["eval_val"],
+                                 load_path=setup["load_path"],
+                                 fine_tuning=setup["fine_tuning"])
+    if setup["mode"].lower() == "train":
         trainer.run()
-    elif mode == "predict":
-        return trainer
+    elif setup["mode"].lower() == "test":
+        trainer.test()
+    else:
+        raise ValueError("Mode: {}, is not defined")

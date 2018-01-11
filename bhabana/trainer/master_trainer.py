@@ -21,6 +21,8 @@ parser.add_argument('--end_at', type=int, default=0,
                     help='End')
 parser.add_argument('--data_parallel', type=bool,
                     help='data parallel')
+parser.add_argument('--mode', type=str, default="train",
+                    help='mode')
 
 args = parser.parse_args()
 
@@ -53,6 +55,7 @@ if args.name in THE_BOOK_OF_EXPERIMENTS:
                                             str(i_c)
                 if args.data_parallel:
                     config["setup"]["data_parallel"] = True
+                config["setup"]["mode"] = args.mode
                 experiment = get_experiment_by_name(args.name)
                 experiment.run(config_updates=config)
     else:

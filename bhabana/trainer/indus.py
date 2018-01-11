@@ -70,7 +70,8 @@ def my_config():
         "early_stopping_delta": 0,
         "patience": 10,
         "train_on_gpu": True,
-        "data_parallel": False
+        "data_parallel": False,
+        "mode": "Train"
     }
     pipeline = {
         "memory": {
@@ -245,6 +246,23 @@ class IndusTrainer(Trainer):
                 self.closure()
                 break
 
+    def test(self):
+        self.load()
+        self.pipeline.eval()
+        self.logger.info("Evaluating: mode=Validation")
+        self.restart_dataloader("validation")
+        self.run_evaluation_epoch(self.dataloader["validation"],
+                                  mode="validation", write_results=True,
+                                  write_vectors=True)
+        self.logger.info("Evaluating: mode=Test")
+        self.restart_dataloader("test")
+        self.run_evaluation_epoch(self.dataloader["test"], mode="test",
+                                  write_results=True,
+                                  write_vectors=True)
+        self.save()
+        self.pipeline.train()
+        self.restart_dataloader("train")
+
     def _post_epoch_routine(self, once_test):
         self.pipeline.eval()
         self.logger.info("Evaluating: mode=Validation")
@@ -286,10 +304,12 @@ class IndusTrainer(Trainer):
             self.log("training.F1_Score", f_score)
 
     def run_evaluation_epoch(self, dataloader, mode="validation",
-                             write_results=False):
+                             write_results=False, write_vectors=True,
+                             verbose=False):
         val_losses, val_accs, val_fscores = [], [], []
         for i_val, val_batch in dataloader:
-            pred, gt, val_loss, acc, f_score, clf_rpt = self.evaluate(val_batch)
+            pred, gt, val_loss, acc, f_score, clf_rpt, output = self.evaluate(
+                    val_batch)
             val_losses.append(val_loss)
             val_accs.append(acc)
             val_fscores.append(f_score)
@@ -297,11 +317,14 @@ class IndusTrainer(Trainer):
                 self.write_results_to_file(i_val, val_batch["text"], pred,
                                            gt, mode)
             if i_val % 10 == 0:
-                self.logger.info("Epoch: {}\tGlobal Step: {}\t"
-                                 "Mode: {}\tLoss: {}\tAcc: {}\t"
-                                 "F1-Score: {}\tBatch Number: {}".format(
-                        self.current_epoch, self.global_step, mode,
-                        val_loss, acc, f_score, i_val))
+                if verbose:
+                    self.logger.info("Epoch: {}\tGlobal Step: {}\t"
+                                     "Mode: {}\tLoss: {}\tAcc: {}\t"
+                                     "F1-Score: {}\tBatch Number: {}".format(
+                            self.current_epoch, self.global_step, mode,
+                            val_loss, acc, f_score, i_val))
+            if write_vectors:
+                self.dump_output(output, i_val, mode)
         avg_loss, avg_acc, avg_f1score = np.average(val_losses),\
                                          np.average(val_accs), \
                                          np.average(val_fscores)
@@ -311,6 +334,22 @@ class IndusTrainer(Trainer):
         if mode == "validation":
             self.update_loss_history(avg_loss)
         self.restart_dataloader(mode)
+
+    def dump_output(self, output, batch_id, mode):
+
+        dump_dir = os.path.join(self.experiment_config["{}_results".format(mode)],
+                                                       "dumps")
+        if not os.path.exists(dump_dir):
+            os.makedirs(dump_dir)
+
+        file_path = os.path.join(dump_dir, "{}_epoch_{}_batch_{}.npy".format(mode,
+                                                          self.current_epoch,
+                                                          batch_id))
+        out = [o.data.cpu().numpy() if
+               self.train_on_gpu else o.data.numpy() for o in output["attention"]]
+        #out = out.data.cpu().numpy() if self.train_on_gpu else out.data.numpy()
+        out = np.array(out)
+        np.save(file_path, out)
 
     def restart_dataloader(self, mode):
         self.dataloader[mode] = self.dataset.get_batch(split=mode,
@@ -331,7 +370,7 @@ class IndusTrainer(Trainer):
         acc, f_score, clf_rpt = self._run_metrics(pred, gt)
 
         scalar_loss = loss.data.cpu().numpy()[0] if self.train_on_gpu else loss.data.numpy()[0]
-        return pred, gt, scalar_loss, acc, f_score, clf_rpt
+        return pred, gt, scalar_loss, acc, f_score, clf_rpt, output
 
     def _run_metrics(self, pred, gt):
         results = []
@@ -538,4 +577,9 @@ def run_pipeline(experiment_name, dataset, setup, pipeline,
                                  data_parallel=setup["data_parallel"],
                                  lr_scheduling_milestones=optimizer[
                                      "lr_scheduling_milestones"])
-    trainer.run()
+    if setup["mode"] == "train":
+        trainer.run()
+    elif setup["mode"] == "test":
+        trainer.test()
+    else:
+        raise ValueError("Mode: {}, is not defined")
